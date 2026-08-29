@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+#
+# check-structure.sh — did we accidentally edit something upstream owns?
+#
+# Artemis works because files upstream ships stay byte-for-byte upstream's.
+# Edit one and next season's `git merge upstream/master` turns into a conflict
+# hunt. This script tells you TODAY instead of next August.
+#
+# Run it whenever you like:  ./scripts/check-structure.sh
+#
+# It reports. It does not block anything, and it never changes a file.
+
+set -uo pipefail
+
+cd "$(git rev-parse --show-toplevel 2>/dev/null)" || {
+    echo "Not inside a git repository."
+    exit 1
+}
+
+# Files and folders upstream owns. See AGENTS.md for the reasoning.
+PROTECTED=(
+    "README.md"
+    "build.gradle"
+    "build.common.gradle"
+    "build.dependencies.gradle"
+    "gradle.properties"
+    "settings.gradle"
+    "gradlew"
+    "gradlew.bat"
+    "gradle"
+    "FtcRobotController"
+    ".github"
+    "TeamCode/build.gradle"
+    "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/pedroPathing"
+    "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/samples"
+)
+
+RED=$'\033[0;31m'; YELLOW=$'\033[0;33m'; GREEN=$'\033[0;32m'; DIM=$'\033[2m'; OFF=$'\033[0m'
+problems=0
+
+echo "Checking Artemis structure..."
+echo
+
+# ─────────────────────────────────────────────────────────────────
+# 1. Uncommitted edits to protected files
+# ─────────────────────────────────────────────────────────────────
+uncommitted=$(git status --porcelain -- "${PROTECTED[@]}" 2>/dev/null)
+if [ -n "$uncommitted" ]; then
+    echo "${RED}✗ Uncommitted changes to files upstream owns:${OFF}"
+    echo "$uncommitted" | sed 's/^/    /'
+    echo "${DIM}    Undo with: git checkout -- <file>${OFF}"
+    echo
+    problems=$((problems + 1))
+fi
+
+# ─────────────────────────────────────────────────────────────────
+# 2. Committed drift, measured from where we last met upstream
+#    (comparing to upstream/master directly would flag upstream's OWN
+#     new commits as our problem — the merge base is the honest baseline)
+# ─────────────────────────────────────────────────────────────────
+if ! git remote get-url upstream >/dev/null 2>&1; then
+    echo "${YELLOW}! No 'upstream' remote — skipping the committed-drift check.${OFF}"
+    echo "${DIM}    Fix: git remote add upstream https://github.com/FTC-23511/SolversLib-Quickstart.git${OFF}"
+    echo
+elif ! git rev-parse --verify --quiet upstream/master >/dev/null; then
+    echo "${YELLOW}! Haven't fetched upstream yet — skipping the committed-drift check.${OFF}"
+    echo "${DIM}    Fix: git fetch upstream${OFF}"
+    echo
+else
+    base=$(git merge-base HEAD upstream/master 2>/dev/null)
+    if [ -n "$base" ]; then
+        drift=$(git diff --name-only "$base" HEAD -- "${PROTECTED[@]}" 2>/dev/null)
+        if [ -n "$drift" ]; then
+            echo "${RED}✗ Committed edits to files upstream owns:${OFF}"
+            echo "$drift" | sed 's/^/    /'
+            echo "${DIM}    These will fight the next upstream merge. See docs/updating-from-upstream.md${OFF}"
+            echo
+            problems=$((problems + 1))
+        fi
+    fi
+fi
+
+# ─────────────────────────────────────────────────────────────────
+# 3. Machine-specific files that must never be committed
+# ─────────────────────────────────────────────────────────────────
+for leaky in "local.properties" ".idea/workspace.xml"; do
+    if git ls-files --error-unmatch "$leaky" >/dev/null 2>&1; then
+        echo "${RED}✗ $leaky is tracked — it points at YOUR machine and will break everyone else's build.${OFF}"
+        echo "${DIM}    Fix: git rm --cached $leaky${OFF}"
+        echo
+        problems=$((problems + 1))
+    fi
+done
+
+# ─────────────────────────────────────────────────────────────────
+# Verdict
+# ─────────────────────────────────────────────────────────────────
+if [ "$problems" -eq 0 ]; then
+    echo "${GREEN}✓ Clean. Upstream's files are untouched — next season's merge will be boring.${OFF}"
+    echo "${DIM}  (Boring is the goal.)${OFF}"
+    exit 0
+fi
+
+echo "${YELLOW}Found $problems problem(s).${OFF}"
+echo "Not sure what to do? Read AGENTS.md, or ask before undoing anything —"
+echo "occasionally one of these is deliberate, and it should be a decision, not an accident."
+exit 1

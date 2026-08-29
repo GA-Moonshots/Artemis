@@ -1,0 +1,44 @@
+# Gradle & Android Studio
+
+**When Android Studio offers to upgrade Gradle or the Android Gradle Plugin on first sync: decline.**
+
+FTC pins those versions deliberately. `sourceCompatibility` sits at Java 1.8 because OnBotJava (the
+in-browser editor other teams use) only supports Java 8. Accepting the upgrade desyncs your machine
+from the repo and produces a build that works for you and nobody else. Version bumps arrive through
+[an upstream merge](updating-from-upstream.md), never through the IDE prompt.
+
+## Warnings that are fine to ignore
+
+```
+Java compiler version 25 has deprecated support for compiling with source/target version 8
+warning: [options] source value 8 is obsolete and will be removed in a future release
+The following annotation processors are not incremental: OpModeAnnotationProcessor.jar
+```
+
+All expected. If the build ends in `BUILD SUCCESSFUL`, nothing above it mattered.
+
+Check for yourself: `./gradlew :TeamCode:compileDebugJavaWithJavac`
+
+## What's actually pinned
+
+These change with every upstream merge, so check rather than trusting a number in a doc:
+
+```bash
+grep distributionUrl gradle/wrapper/gradle-wrapper.properties   # Gradle
+grep "com.android.tools.build:gradle" build.gradle              # AGP
+grep -E "compileSdk|minSdkVersion|targetSdkVersion" build.common.gradle
+```
+
+As of 2026-08-29: Gradle 8.9, AGP 8.7.0, compileSdk 34, minSdk 24, targetSdk 28, Java 1.8.
+
+Cross-reference AGP against Android Studio's
+[compatibility table](https://developer.android.com/build/releases/gradle-plugin#agp-plugin-versions)
+before assuming a given Studio version can open this project.
+
+## Sync actually failed
+
+1. First sync needs internet — `aapt2` and friends download on first build, no offline fallback.
+2. Confirm your Android Studio version matches what FIRST recommends for this SDK (release notes
+   are in `README.md`, upstream's file).
+3. Run the greps above instead of trusting what worked last year.
+4. Found the fix? Add it to [issue-log.md](issue-log.md).
