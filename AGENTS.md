@@ -56,7 +56,8 @@ Adding a mechanism? Copy `ExampleSubsystem` / `ExampleCommand`. Adding a movemen
 
 1. [docs/architecture.md](docs/architecture.md) — one page, explains the whole repo.
 2. Changing drive behavior? The numbers are in `utils/Constants.java`, not scattered in code.
-3. Build check: `./gradlew :TeamCode:compileDebugJavaWithJavac`. Java-8 deprecation warnings on a
-   modern JDK are expected noise.
+3. Build check: `./scripts/build.sh` (or `./gradlew :TeamCode:compileDebugJavaWithJavac`). Java-8
+   deprecation warnings on a modern JDK are expected noise. Students deploy from Android Studio;
+   `./scripts/deploy.sh` does the same thing from a terminal.
 4. Lost an hour to something? Add it to [docs/issue-log.md](docs/issue-log.md) instead of fixing
    it silently.
