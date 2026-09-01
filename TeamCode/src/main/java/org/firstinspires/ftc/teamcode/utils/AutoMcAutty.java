@@ -63,6 +63,18 @@ public class AutoMcAutty extends CommandOpMode {
     }
 
     /**
+     * Runs when autonomous stops, however it stops. Leaves a note for teleop
+     * saying where we ended up and which alliance we're on — otherwise
+     * field-centric drive starts from a guess. See PersistentPoseManager.
+     */
+    @Override
+    public void end() {
+        if (robot != null) {
+            PersistentPoseManager.save(robot.drive.getPose(), robot.isRed);
+        }
+    }
+
+    /**
      * ⚙ TUNE: measure these against the actual field before your first match.
      * Field is 144"x144", origin bottom-left, 0 rad points right (+X).
      */

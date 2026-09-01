@@ -47,26 +47,50 @@ No while-loops, no `Thread.sleep()` in a Command. The scheduler runs every activ
 ## Where things go
 
 ```
-MyRobot.java              subsystems, button bindings, autonomous plan
-commands/DriveAbstract    base class for anything that moves the robot
-commands/Drive            default teleop drive command
-subsystems/PedroDrive     mecanum + Pedro + dashboard drawing — tune it, don't rewrite it
-subsystems/Sensors        the only telemetry flush
-utils/Constants           every hardware name and tunable number
-utils/DriveyMcDriverson   teleop entry point
-utils/AutoMcAutty         autonomous entry point
-utils/Tuning              the 17 drivetrain tuners (adopted from the old quickstart — ours now)
+MyRobot.java                 subsystems, button bindings, autonomous plan
+
+commands/DriveAbstract       base for anything that moves the robot (timeout + cleanup)
+commands/Drive               default teleop drive
+commands/DriveToPose         ├ go stand exactly there
+commands/DriveFwdByDist      ├ go that way N inches
+commands/DriveTurnBy         ├ rotate N degrees
+commands/DriveTurnTo         └ face this heading
+
+subsystems/PedroDrive        mecanum + Pedro — tune it, don't rewrite it
+subsystems/Sensors           every shared sensor, the Limelight, AND the only telemetry flush
+
+utils/Constants              hardware names, motor directions, follower config (final)
+utils/Tunables               values you edit live from the dashboard (not final)
+utils/FieldView              everything drawn on the dashboard, incl. frame markers
+utils/FieldMap               tag positions + every coordinate conversion
+utils/PersistentPoseManager  auto → teleop pose handoff
+utils/DriveyMcDriverson      teleop entry point
+utils/AutoMcAutty            autonomous entry point
+utils/CameraCalibration      is the camera telling the truth?
+utils/Tuning                 the 17 drivetrain tuners
 ```
 
 Adding a mechanism? Copy `ExampleSubsystem` / `ExampleCommand`. Adding a movement? Extend
 `DriveAbstract` — and give it a real timeout.
 
+## Rule 4: numbers have exactly one home
+
+`Constants` for things that must not change mid-match (hardware names, directions, follower
+config). `Tunables` for things worth editing live from the dashboard. Never both — a value defined
+in two places is a value that will disagree with itself at the worst moment.
+
+Coordinates convert **once, at the edge**, in `FieldMap`. A conversion buried in the middle of a
+command is a bug waiting for a Saturday.
+
 ## Before you start
 
 1. [docs/architecture.md](docs/architecture.md) — one page, explains the whole repo.
-2. Changing drive behavior? The numbers are in `utils/Constants.java`, not scattered in code.
-3. Build check: `./scripts/build.sh` (or `./gradlew :TeamCode:compileDebugJavaWithJavac`). Java-8
-   deprecation warnings on a modern JDK are expected noise. Students deploy from Android Studio;
-   `./scripts/deploy.sh` does the same thing from a terminal.
-4. Lost an hour to something? Add it to [docs/issue-log.md](docs/issue-log.md) instead of fixing
-   it silently.
+2. Writing a path, or a coordinate looks wrong? [docs/coordinates.md](docs/coordinates.md) first.
+   Panels and Pedro do not agree on where (0,0) is, and getting this wrong is silent.
+3. Changing drive behaviour? The numbers are in `utils/Constants.java` or `utils/Tunables.java`,
+   never scattered through the code.
+4. Build check: `./scripts/build.sh`. Structure check before you commit:
+   `./scripts/check-structure.sh`. Java-8 deprecation warnings on a modern JDK are expected noise.
+   Students deploy from Android Studio; `./scripts/deploy.sh` does the same from a terminal.
+5. Lost an hour to something? Add it to [docs/issue-log.md](docs/issue-log.md) instead of fixing
+   it silently. Planning something bigger? [docs/roadmap.md](docs/roadmap.md).

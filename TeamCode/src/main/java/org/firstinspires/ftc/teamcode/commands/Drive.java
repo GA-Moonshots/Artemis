@@ -6,7 +6,7 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 
 import org.firstinspires.ftc.teamcode.MyRobot;
 import org.firstinspires.ftc.teamcode.subsystems.PedroDrive;
-import org.firstinspires.ftc.teamcode.utils.Constants;
+import org.firstinspires.ftc.teamcode.utils.Tunables;
 
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -48,7 +48,7 @@ public class Drive extends CommandBase {
     public void execute() {
         // Hold right bumper for precision mode.
         double easyDoesIt = player1.getButton(GamepadKeys.Button.RIGHT_BUMPER)
-                ? Constants.SLOW_MODE_MULTIPLIER
+                ? Tunables.SLOW_MODE_MULTIPLIER
                 : 1.0;
 
         double forward = deadZone(player1.getLeftY());
@@ -80,6 +80,6 @@ public class Drive extends CommandBase {
 
     /** Sticks drift. Anything this small is a lie. */
     private double deadZone(double input) {
-        return Math.abs(input) <= Constants.INPUT_THRESHOLD ? 0.0 : input;
+        return Math.abs(input) <= Tunables.INPUT_THRESHOLD ? 0.0 : input;
     }
 }

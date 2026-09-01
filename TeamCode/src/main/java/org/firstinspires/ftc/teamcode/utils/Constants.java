@@ -75,14 +75,8 @@ public class Constants {
     public static final double MAX_DRIVE_SPEED = 1.0;
     public static final double DEFAULT_DRIVE_SPEED = 1.0;
 
-    /** Held right bumper = precision mode, for when "close enough" isn't. */
-    public static final double SLOW_MODE_MULTIPLIER = 0.3;
-
-    /** Sticks are never truly centered. Ignore noise below this. */
-    public static final double INPUT_THRESHOLD = 0.1;
-
-    /** How close (inches) counts as "arrived" for a path command. */
-    public static final double POSE_TOLERANCE = 0.5;
+    // Slow mode, stick deadzone, and pose tolerance live in Tunables — they're
+    // read every loop and worth twiddling live. One number, one home.
 
     /** Field-centric: push the stick toward the far wall, robot goes there,
      *  regardless of which way it's facing. Turn this off only if a driver
@@ -234,6 +228,48 @@ public class Constants {
             // https://pedropathing.com/docs/pathing/tuning/localization/pinpoint#encoder-directions
             .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED)
             .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+
+    // ============================================================
+    //                    VISION / LIMELIGHT
+    // ============================================================
+
+    public static final String LIMELIGHT_NAME = "limelight";
+    public static final int LIMELIGHT_POLL_HZ = 30;
+    public static final int LIMELIGHT_APRILTAG_PIPELINE = 0;
+
+    /**
+     * ⚙ TUNE — where the camera sits on the robot.
+     *
+     * Measured from the robot's CENTRE at floor level:
+     *   +X = right, +Y = forward, +Z = up. Inches and degrees.
+     *
+     * IMPORTANT: with a Limelight, the numbers that actually do the maths live
+     * ON THE CAMERA (its web UI, "robot space" settings). These are our
+     * version-controlled record of what should be entered there — a reflashed
+     * Limelight loses its config, and this is how you get it back. The
+     * CameraCalibration OpMode compares what the camera reports against a known
+     * pose and tells you what to change.
+     */
+    public static final double CAMERA_X_INCHES = 0.0;    // right of centre
+    public static final double CAMERA_Y_INCHES = 6.0;    // forward of centre
+    public static final double CAMERA_Z_INCHES = 12.0;   // above the floor
+    public static final double CAMERA_YAW_DEGREES = 0.0;    // 0 = facing forward
+    public static final double CAMERA_PITCH_DEGREES = 0.0;  // + = tilted up
+    public static final double CAMERA_ROLL_DEGREES = 0.0;
+
+    /** Older than this and the reading describes where we used to be. */
+    public static final long VISION_MAX_STALENESS_MS = 200;
+
+    /** Beyond this, angular error turns into large position error. */
+    public static final double VISION_MAX_TAG_DISTANCE_INCHES = 96.0;
+
+    /**
+     * Largest disagreement with odometry we'll accept as a correction.
+     * Bigger than this is far more likely a misread than a teleporting robot.
+     * Raise it if real corrections are being declined; lower it if bad reads
+     * are getting through.
+     */
+    public static final double VISION_MAX_JUMP_INCHES = 24.0;
 
     // ============================================================
     //                    IMU ORIENTATION

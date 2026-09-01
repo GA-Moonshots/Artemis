@@ -3,7 +3,7 @@
 @AGENTS.md
 
 The import above pulls in the full guidance. If your tool doesn't support `@` imports, open
-`AGENTS.md` yourself before doing anything. The three rules that matter most, restated here so
+`AGENTS.md` yourself before doing anything. The four rules that matter most, restated here so
 they're in context no matter what:
 
 ## 1. Never edit files upstream owns
@@ -34,6 +34,18 @@ Verify anytime with `./scripts/check-structure.sh`.
 
 No while-loops, no `Thread.sleep()` in a Command. The scheduler runs every active command's
 `execute()` once per loop — block one, freeze all. Wait by checking a timer in `isFinished()`.
+
+## 4. One frame, converted once
+
+Everything in this repo is in Pedro's frame: inches, origin at a field **corner**, 0 rad = +X.
+
+Panels' canvas is **centre**-origin and its Pedro preset applies a −72/−72 shift, a 90° rotation
+*and* a Y-flip. The Limelight reports metres. Every conversion happens in `utils/FieldMap`, at the
+edge — never halfway through a command.
+
+This is the most expensive mistake available here: nothing errors, the numbers just quietly mean
+something else, and it stays self-consistent while being wrong. It cost this team a season. Read
+`docs/coordinates.md` before writing a path.
 
 ---
 

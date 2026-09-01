@@ -12,7 +12,9 @@ Artemis, goddess of the moon, patron of a Moonshots codebase. She also doesn't m
 - **Command-pattern scaffolding** — subsystems, a polymorphic drive-command family, button
   bindings, teleop and autonomous entry points that already run
 - **A single telemetry funnel** that goes to the Driver Station and dashboard at once
-- **Every tunable number in one file**, with the tuning sequence written next to it
+- **AprilTag localization** that corrects odometry drift when it's confident, and quietly does
+  nothing when the camera is missing or unsure
+- **Every tunable number in one place**, with the tuning sequence written next to it
 
 ## Start here
 

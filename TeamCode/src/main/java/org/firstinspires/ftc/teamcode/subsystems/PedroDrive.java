@@ -1,12 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import com.bylazar.field.FieldManager;
-import com.bylazar.field.PanelsField;
-import com.bylazar.field.Style;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
-import com.pedropathing.math.Vector;
-import com.pedropathing.util.PoseHistory;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -14,6 +9,8 @@ import com.seattlesolvers.solverslib.command.SubsystemBase;
 
 import org.firstinspires.ftc.teamcode.MyRobot;
 import org.firstinspires.ftc.teamcode.utils.Constants;
+import org.firstinspires.ftc.teamcode.utils.FieldView;
+import org.firstinspires.ftc.teamcode.utils.Tunables;
 
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -52,17 +49,15 @@ public class PedroDrive extends SubsystemBase {
     private double driveSpeed = Constants.DEFAULT_DRIVE_SPEED;
 
     // ============================================================
-    //                    PANELS FIELD DRAWING
-    //  Watching a green dot retrace your autonomous beats squinting at
-    //  three numbers on a phone. If you can see it, you can debug it.
+    //                    DASHBOARD
+    //  All drawing lives in FieldView — including the frame markers that tell
+    //  you whether Panels and Pedro even agree on where (0,0) is.
     // ============================================================
 
-    private static final double ROBOT_RADIUS = 9.0;
-    private static final Style ROBOT_STYLE   = new Style("", "#4CAF50", 3.0); // where it is
-    private static final Style HISTORY_STYLE = new Style("", "#81C784", 2.0); // where it's been
+    public final FieldView view = new FieldView();
 
-    private FieldManager panelsField;
-    private boolean breadcrumbsEnabled = true;
+    /** Where the active command is trying to go. Null when nothing is driving. */
+    private Pose targetPose = null;
 
     // ============================================================
     //                        CONSTRUCTOR
@@ -103,18 +98,6 @@ public class PedroDrive extends SubsystemBase {
         // ============ Pedro ============
         follower = Constants.createFollower(robot.hardwareMap);
         follower.setStartingPose(startPose);
-
-        initializePanelsField();
-    }
-
-    private void initializePanelsField() {
-        try {
-            panelsField = PanelsField.INSTANCE.getField();
-            panelsField.setOffsets(PanelsField.INSTANCE.getPresets().getPEDRO_PATHING());
-        } catch (Exception e) {
-            // No Panels? Fine. Drawing is a luxury; driving is not.
-            breadcrumbsEnabled = false;
-        }
     }
 
     // ============================================================
@@ -128,7 +111,7 @@ public class PedroDrive extends SubsystemBase {
         // Not twice (robot thinks it moved twice as far). Once.
         follower.update();
 
-        drawRobotToPanels();
+        draw();
         addTelemetry();
     }
 
@@ -227,62 +210,28 @@ public class PedroDrive extends SubsystemBase {
     //                    PANELS DRAWING
     // ============================================================
 
-    private void drawRobotToPanels() {
-        if (!breadcrumbsEnabled || panelsField == null) return;
-
-        try {
-            Pose pose = follower.getPose();
-
-            // NaN poses happen when localization is confused. Drawing one
-            // takes the whole dashboard down with it.
-            if (pose == null || Double.isNaN(pose.getX())
-                    || Double.isNaN(pose.getY()) || Double.isNaN(pose.getHeading())) {
-                return;
-            }
-
-            drawBreadcrumbs(follower.getPoseHistory());
-            drawRobot(pose);
-            panelsField.update();
-        } catch (Exception e) {
-            // Never let a drawing bug stop the robot. Draw once, fail forever.
-            breadcrumbsEnabled = false;
+    /**
+     * One draw pass per loop. Order matters only for what ends up on top.
+     * Every piece is individually switchable from the dashboard via Tunables,
+     * so a busy canvas can be thinned without a redeploy.
+     */
+    private void draw() {
+        if (Tunables.SHOW_FRAME_MARKERS) view.drawFrameMarkers();
+        if (Tunables.SHOW_BREADCRUMBS)   view.drawBreadcrumbs(follower.getPoseHistory());
+        if (Tunables.SHOW_TARGET && targetPose != null) {
+            view.drawTarget(targetPose, getPose());
         }
+        view.drawRobot(getPose(), robot.isRed);
+        view.send();
     }
 
-    /** Circle for the body, line for the nose so you can tell which way it faces. */
-    private void drawRobot(Pose pose) {
-        panelsField.setStyle(ROBOT_STYLE);
-        panelsField.moveCursor(pose.getX(), pose.getY());
-        panelsField.circle(ROBOT_RADIUS);
-
-        Vector heading = pose.getHeadingAsUnitVector();
-        heading.setMagnitude(heading.getMagnitude() * ROBOT_RADIUS);
-
-        panelsField.setStyle(ROBOT_STYLE);
-        panelsField.moveCursor(pose.getX() + heading.getXComponent() / 2,
-                               pose.getY() + heading.getYComponent() / 2);
-        panelsField.line(pose.getX() + heading.getXComponent(),
-                         pose.getY() + heading.getYComponent());
+    /** Commands call this so the dashboard can show intent next to reality. */
+    public void setTargetPose(Pose target) {
+        this.targetPose = target;
     }
 
-    /** Breadcrumb trail of everywhere we've been this match. */
-    private void drawBreadcrumbs(PoseHistory history) {
-        if (history == null) return;
-
-        double[] xs = history.getXPositionsArray();
-        double[] ys = history.getYPositionsArray();
-        if (xs == null || ys == null) return;
-
-        panelsField.setStyle(HISTORY_STYLE);
-        int size = Math.min(xs.length, ys.length);
-        for (int i = 0; i < size - 1; i++) {
-            panelsField.moveCursor(xs[i], ys[i]);
-            panelsField.line(xs[i + 1], ys[i + 1]);
-        }
-    }
-
-    public void togglePanelsDrawing() {
-        breadcrumbsEnabled = !breadcrumbsEnabled;
+    public void clearTargetPose() {
+        this.targetPose = null;
     }
 
     // ============================================================

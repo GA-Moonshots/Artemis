@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.InstantCommand;
@@ -13,10 +14,14 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.commands.Drive;
 import org.firstinspires.ftc.teamcode.commands.DriveFwdByDist;
+import org.firstinspires.ftc.teamcode.commands.DriveTurnBy;
+import org.firstinspires.ftc.teamcode.commands.DriveTurnTo;
 import org.firstinspires.ftc.teamcode.commands.ExampleCommand;
 import org.firstinspires.ftc.teamcode.subsystems.ExampleSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.PedroDrive;
 import org.firstinspires.ftc.teamcode.subsystems.Sensors;
+import org.firstinspires.ftc.teamcode.utils.PersistentPoseManager;
+import org.firstinspires.ftc.teamcode.utils.Tunables;
 
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -58,8 +63,21 @@ public class MyRobot extends Robot {
     //                    TELEOP CONSTRUCTOR
     // ============================================================
 
+    /**
+     * TeleOp: picks up wherever autonomous left the robot, so field-centric
+     * drive starts from the truth instead of a guess. If auto didn't run (or
+     * ran too long ago to trust), falls back to defaults — see
+     * PersistentPoseManager.
+     */
     public MyRobot(LinearOpMode opMode) {
-        this(opMode, true, true, new Pose(0, 0, 0));
+        this(opMode, PersistentPoseManager.load());
+    }
+
+    /** Reads the handoff exactly once, then hands it to the real constructor. */
+    private MyRobot(LinearOpMode opMode, PersistentPoseManager.Handoff handoff) {
+        this(opMode, handoff.isRed, true, handoff.pose);
+        sensors.addTelemetry("Pose handoff",
+                handoff.wasFound ? "loaded from autonomous" : "NONE — using defaults");
     }
 
     // ============================================================
@@ -76,6 +94,14 @@ public class MyRobot extends Robot {
 
         this.player1 = new GamepadEx(opMode.gamepad1);
         this.player2 = new GamepadEx(opMode.gamepad2);
+
+        // One bulk read per loop instead of a separate USB round-trip for every
+        // encoder and sensor. Costs one line, buys milliseconds every loop —
+        // and Pedro's localization accuracy is downstream of loop time.
+        // MANUAL means "read once per loop, when I ask" and is what you want.
+        setBulkReading(opMode.hardwareMap, LynxModule.BulkCachingMode.MANUAL);
+
+        Tunables.refresh();   // pull any values the dashboard is holding
 
         // Sensors first — everything else wants to log to it.
         sensors = new Sensors(this);
@@ -115,6 +141,14 @@ public class MyRobot extends Robot {
         // X — nudge forward 12". Example of scheduling a real Command from a button.
         new GamepadButton(player1, GamepadKeys.Button.X)
                 .whenPressed(new DriveFwdByDist(this, 12, 3));
+
+        // Y — snap to face downfield. Absolute heading, so it works from any angle.
+        new GamepadButton(player1, GamepadKeys.Button.Y)
+                .whenPressed(new DriveTurnTo(this, 90, 3));
+
+        // Bumper-free 180: useful when a driver gets turned around.
+        new GamepadButton(player1, GamepadKeys.Button.DPAD_DOWN)
+                .whenPressed(new DriveTurnBy(this, 180, true, 3));
 
         // DPAD UP — panic button. Drops any path and hands the wheels back.
         new GamepadButton(player1, GamepadKeys.Button.DPAD_UP)

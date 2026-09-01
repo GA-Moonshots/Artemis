@@ -5,7 +5,7 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathBuilder;
 
 import org.firstinspires.ftc.teamcode.MyRobot;
-import org.firstinspires.ftc.teamcode.utils.Constants;
+import org.firstinspires.ftc.teamcode.utils.Tunables;
 
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -60,6 +60,7 @@ public class DriveFwdByDist extends DriveAbstract {
                 .addPath(new BezierLine(current, targetPose))
                 .setConstantHeadingInterpolation(heading);
         follower.followPath(path.build());
+        drive.setTargetPose(targetPose);   // so the dashboard shows intent vs. reality
 
         robot.sensors.addTelemetry("FwdByDist", "%.1f\" @ %.1f°",
                 distance, Math.toDegrees(heading));
@@ -67,7 +68,7 @@ public class DriveFwdByDist extends DriveAbstract {
 
     @Override
     public void execute() {
-        if (follower.atPose(targetPose, Constants.POSE_TOLERANCE, Constants.POSE_TOLERANCE)) {
+        if (follower.atPose(targetPose, Tunables.POSE_TOLERANCE, Tunables.POSE_TOLERANCE)) {
             arrived = true;
         }
     }
@@ -80,6 +81,7 @@ public class DriveFwdByDist extends DriveAbstract {
     @Override
     public void end(boolean interrupted) {
         standardCleanup();
+        drive.clearTargetPose();
         robot.sensors.addTelemetry("FwdByDist",
                 interrupted ? "INTERRUPTED" : (arrived ? "Arrived" : "TIMED OUT"));
     }

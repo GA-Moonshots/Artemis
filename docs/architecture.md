@@ -42,14 +42,20 @@ Default commands return `false` from `isFinished()` forever. They don't end — 
 ```
 DriveAbstract  (base: references, timeout, cleanup)
 ├── DriveToPose      go stand exactly there
-└── DriveFwdByDist   go that way N inches
+├── DriveFwdByDist   go that way N inches
+├── DriveTurnBy      rotate N degrees (relative)
+└── DriveTurnTo      face this heading (absolute)
 ```
 
-Adding a third is the normal way to extend this — copy whichever is closer.
+Adding a fifth is the normal way to extend this — copy whichever is closest.
 
-Every one takes a timeout. **This is not optional**: a path command that never quite reaches
-tolerance will otherwise run until the match ends, blocking everything queued behind it. That's
-what the field is named `patience` — when it runs out, the command ends whether or not it arrived.
+**Every one takes a timeout, and that is not optional.** A command that never quite reaches its
+tolerance otherwise runs until the match ends, blocking everything queued behind it. The timer is
+called `patience`; when it runs out, the command ends whether or not it arrived.
+
+That's also why the turn commands are ours rather than SolversLib's. Theirs are
+`isFinished() { return !follower.isBusy(); }` — no timeout, no cleanup. Pin the robot against a
+wall and it never finishes.
 
 Note `DriveToPose.execute()` is nearly empty. Commands hand the follower a path in `initialize()`;
 the follower does the actual driving from `PedroDrive.periodic()`. Commands say *what*, the
@@ -59,7 +65,8 @@ follower handles *how*.
 
 **All telemetry goes through `Sensors`.** Call `robot.sensors.addTelemetry(...)`. Never call
 `telemetry.update()` anywhere else — `Sensors.periodic()` is the only flush in the project, and a
-second one costs you half your data.
+second one costs you half your data. `Sensors` also owns the Limelight and the AprilTag trust
+policy, because a camera is a sensor.
 
 **`follower.update()` runs exactly once per loop**, in `PedroDrive.periodic()`. Zero times and the
 robot thinks it never moved; twice and it thinks it moved twice as far.
@@ -69,20 +76,27 @@ robot thinks it never moved; twice and it thinks it moved twice as far.
 Three folders under `teamcode/`, and that's the whole structure:
 
 ```
-MyRobot.java               subsystems, button bindings, auto plan
+MyRobot.java                 subsystems, button bindings, auto plan
 
-commands/Drive             default teleop drive
-commands/DriveAbstract     base for all movement commands
-commands/DriveToPose       ├ go stand exactly there
-commands/DriveFwdByDist    └ go that way N inches
+commands/Drive               default teleop drive
+commands/DriveAbstract       base for all movement commands
+commands/DriveToPose         ├ go stand exactly there
+commands/DriveFwdByDist      ├ go that way N inches
+commands/DriveTurnBy         ├ rotate N degrees
+commands/DriveTurnTo         └ face this heading
 
-subsystems/PedroDrive      mecanum + Pedro + dashboard drawing
-subsystems/Sensors         the only telemetry flush
+subsystems/PedroDrive        mecanum + Pedro localization
+subsystems/Sensors           shared sensors, the Limelight, the only telemetry flush
 
-utils/Constants            every hardware name and tunable number
-utils/DriveyMcDriverson    teleop entry point
-utils/AutoMcAutty          autonomous entry point
-utils/Tuning               the 17 drivetrain tuners
+utils/Constants              hardware names, directions, follower config (final)
+utils/Tunables               live-editable from the dashboard (not final)
+utils/FieldView              all dashboard drawing, incl. frame markers
+utils/FieldMap               tag positions + coordinate conversions
+utils/PersistentPoseManager  auto → teleop pose handoff
+utils/DriveyMcDriverson      teleop entry point
+utils/AutoMcAutty            autonomous entry point
+utils/CameraCalibration      is the camera telling the truth?
+utils/Tuning                 the 17 drivetrain tuners
 ```
 
 OpModes live in `utils/`. Don't add a fourth folder.
@@ -90,7 +104,8 @@ OpModes live in `utils/`. Don't add a fourth folder.
 `ExampleSubsystem` and `ExampleCommand` are templates. Copy them for this year's mechanisms, then
 delete them.
 
-Tuning the drivetrain: [tuning.md](tuning.md). Deeper theory the code doesn't duplicate:
+Coordinates and the frame of reference: [coordinates.md](coordinates.md) — read it before writing
+a path. Tuning the drivetrain: [tuning.md](tuning.md). Deeper theory the code doesn't duplicate:
 the team [GitBook](https://gilmour.online/compsci/competitive-robotics/software-team).
 
 SolversLib supplies `Robot`, `CommandOpMode`, `SubsystemBase`, and `CommandBase` — it's a Gradle

@@ -6,6 +6,8 @@
 
 **New robot?** [tuning.md](tuning.md), start to finish, before your first real drive.
 
+**Writing a path, or a coordinate looks wrong?** [coordinates.md](coordinates.md).
+
 **Android Studio yelling at you?** [gradle-and-android-studio.md](gradle-and-android-studio.md).
 Short version: decline the upgrade it's offering.
 
@@ -15,10 +17,12 @@ Short version: decline the upgrade it's offering.
 |---|---|
 | [setup.md](setup.md) | Get your machine working — Android Studio, git remotes, the scripts |
 | [architecture.md](architecture.md) | Subsystems, commands, the scheduler — how it fits together |
+| [coordinates.md](coordinates.md) | The frame of reference — read before writing any path |
 | [tuning.md](tuning.md) | The 8-phase drivetrain tuning sequence |
 | [gradle-and-android-studio.md](gradle-and-android-studio.md) | Build errors, and what's safe to ignore |
 | [updating-from-upstream.md](updating-from-upstream.md) | Pulling the new season's SDK without losing our layer |
 | [issue-log.md](issue-log.md) | Dated gotchas, so nobody rediscovers them next August |
+| [roadmap.md](roadmap.md) | What's built, what's next, what still needs the robot |
 
 ## Scripts
 
