@@ -8,15 +8,19 @@ they're in context no matter what:
 
 ## 1. Never edit files upstream owns
 
-This repo merges `upstream/master` every season. These stay byte-for-byte upstream's:
+Upstream is `FIRST-Tech-Challenge/FtcRobotController` (the FTC SDK), merged every season. These
+stay byte-for-byte upstream's:
 
 `README.md` · `build.gradle` · `build.common.gradle` · `build.dependencies.gradle` ·
 `gradle.properties` · `settings.gradle` · `gradlew*` · `gradle/` · `FtcRobotController/` ·
-`.github/` · `TeamCode/build.gradle` · `TeamCode/.../teamcode/pedroPathing/` ·
-`TeamCode/.../teamcode/samples/`
+`.github/`
 
-Our layer — safe to edit, invisible to upstream: `docs/`, `scripts/`, `MOONSHOTS.md`, `AGENTS.md`,
-`CLAUDE.md`, and `TeamCode/.../teamcode/{utils,subsystems,commands,opmodes}/` + `MyRobot.java`.
+Our layer — safe to edit: `docs/`, `scripts/`, `MOONSHOTS.md`, `AGENTS.md`, `CLAUDE.md`,
+`TeamCode/build.gradle`, and `TeamCode/.../teamcode/{commands,subsystems,utils}/` + `MyRobot.java`.
+
+**Exactly three folders under `teamcode/`: `commands`, `subsystems`, `utils`. Don't add a fourth.**
+
+SolversLib / Pedro / Panels are Gradle dependencies — update by version bump, never by merge.
 
 Think you need to edit a protected file? You don't. Add a file beside it, or ask a human.
 Verify anytime with `./scripts/check-structure.sh`.

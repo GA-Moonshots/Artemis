@@ -8,7 +8,7 @@ toolchain FIRST supports, so the error messages you hit are the ones the docs an
 ```bash
 git clone https://github.com/GA-Moonshots/Artemis.git
 cd Artemis
-git remote add upstream https://github.com/FTC-23511/SolversLib-Quickstart.git
+git remote add upstream https://github.com/FIRST-Tech-Challenge/FtcRobotController.git
 ./scripts/doctor.sh
 ```
 

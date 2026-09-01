@@ -11,16 +11,22 @@ seconds to read, cut it.
 
 ## Rule 1: don't break the merge
 
-Artemis tracks `upstream` = `FTC-23511/SolversLib-Quickstart` and pulls it in every season. Every
-file upstream can touch must stay byte-for-byte theirs, so that merge stays silent forever.
+Artemis tracks `upstream` = `FIRST-Tech-Challenge/FtcRobotController` — the FTC SDK itself — and
+pulls it in every season. Every file upstream can touch must stay byte-for-byte theirs, so that
+merge stays silent forever.
 
 **Never hand-edit:** `README.md`, `build.gradle`, `build.common.gradle`,
-`build.dependencies.gradle`, `gradle.properties`, `gradle/`, `gradlew*`, `FtcRobotController/`,
-`.github/*`, `TeamCode/build.gradle`, `TeamCode/.../teamcode/pedroPathing/`,
-`TeamCode/.../teamcode/samples/`.
+`build.dependencies.gradle`, `gradle.properties`, `settings.gradle`, `gradle/`, `gradlew*`,
+`FtcRobotController/`, `.github/*`.
 
-**Always safe:** `docs/`, `MOONSHOTS.md`, `AGENTS.md`, `CLAUDE.md`, and our packages under
-`TeamCode/.../teamcode/` — `utils/`, `subsystems/`, `commands/`, `opmodes/`, `MyRobot.java`.
+**Always safe:** `docs/`, `scripts/`, `MOONSHOTS.md`, `AGENTS.md`, `CLAUDE.md`,
+`TeamCode/build.gradle` (FIRST ships it nearly empty and expects teams to add dependencies), and
+everything under `TeamCode/.../teamcode/` — `commands/`, `subsystems/`, `utils/`, `MyRobot.java`.
+
+**Those three folders are the whole structure.** Don't add a fourth. OpModes live in `utils/`.
+
+SolversLib, Pedro Pathing, and Panels are Gradle *dependencies*, not forks — update them by
+bumping a version in `TeamCode/build.gradle`, never by merging anything.
 
 Need something in the first list? You don't. Add a file beside it, or ask a human. This layout is
 the entire point of the repo — don't undo it because a one-line edit looked easier.
@@ -42,11 +48,14 @@ No while-loops, no `Thread.sleep()` in a Command. The scheduler runs every activ
 
 ```
 MyRobot.java              subsystems, button bindings, autonomous plan
-opmodes/                  DriveyMcDriverson (teleop), AutoMcAutty (auto)
+commands/DriveAbstract    base class for anything that moves the robot
+commands/Drive            default teleop drive command
 subsystems/PedroDrive     mecanum + Pedro + dashboard drawing — tune it, don't rewrite it
 subsystems/Sensors        the only telemetry flush
-commands/DriveAbstract    base class for anything that moves the robot
 utils/Constants           every hardware name and tunable number
+utils/DriveyMcDriverson   teleop entry point
+utils/AutoMcAutty         autonomous entry point
+utils/Tuning              the 17 drivetrain tuners (adopted from the old quickstart — ours now)
 ```
 
 Adding a mechanism? Copy `ExampleSubsystem` / `ExampleCommand`. Adding a movement? Extend

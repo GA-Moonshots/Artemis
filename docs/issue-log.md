@@ -6,6 +6,45 @@ Format: `## YYYY-MM-DD — title`, then what broke, why, and the fix.
 
 ---
 
+## 2026-08-29 — Migrated upstream: Quickstart → FIRST's SDK
+
+The SolversLib Quickstart hadn't been touched since February and held us at SDK v11.1. Repointed
+`upstream` to `FIRST-Tech-Challenge/FtcRobotController` (shared git ancestry, so it merged
+normally) and jumped to **v11.2.1 / Gradle 9.1 / AGP 8.13.2**. FIRST's `TeamCode` contains only a
+readme, which is why `pedroPathing/` and `samples/` are gone — those were Quickstart injections.
+`Tuning.java` was rescued into `utils/` before deleting the rest. SolversLib is a *dependency*, not
+an upstream; see [updating-from-upstream.md](updating-from-upstream.md).
+
+## 2026-08-29 — SolversLib 0.3.4 hard-pins the SDK version
+
+After moving to SDK 11.2.1 the build died with:
+
+```
+Cannot find a version of 'org.firstinspires.ftc:FtcCommon' that satisfies the version constraints:
+  org.solverslib:core:0.3.4 --> org.firstinspires.ftc:FtcCommon:{strictly 11.1.0}
+```
+
+`{strictly}` can't be overridden by normal resolution. **SolversLib 0.3.5 dropped the pin
+entirely** (its POM lists only kotlin-stdlib, ejml, androidx.core), so the fix was bumping to
+0.3.5. Lesson: when an SDK bump fails on a version constraint, check whether the *library* pins it
+before touching anything in the SDK.
+
+## 2026-08-29 — FIRST's stock compileSdk doesn't build
+
+FIRST v11.2.1 ships `compileSdkVersion 30` in `build.common.gradle` and
+`FtcRobotController/build.gradle`. With AGP 8.13.2 and our dependency set that fails outright
+("Recommended action: Update this project to use a newer compileSdk"). We keep `compileSdk 34` as
+a deliberate deviation — it's in `ALLOWED_DRIFT` in `scripts/check-structure.sh`, so the structure
+check reports it as expected rather than as an error. If a future merge reverts it to 30, put 34
+back.
+
+## 2026-08-29 — Android Studio silently edited settings.gradle
+
+Found `settings.gradle` modified with a `foojay-resolver-convention` plugin block nobody added on
+purpose — Android Studio wrote it during a Gradle sync. Exactly the scenario
+`check-structure.sh` exists for, and it caught it. Discarded; FIRST's v11.2.1 `settings.gradle`
+supplies its own `pluginManagement` block that covers the same ground.
+
 ## 2026-08-29 — Upstream's `pedroPathing/Constants.java` can't actually drive
 
 The stub upstream ships builds a follower with no drivetrain and no localizer:

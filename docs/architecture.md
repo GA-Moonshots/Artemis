@@ -66,19 +66,33 @@ robot thinks it never moved; twice and it thinks it moved twice as far.
 
 ## Where things are
 
+Three folders under `teamcode/`, and that's the whole structure:
+
 ```
-MyRobot.java                 subsystems, button bindings, auto plan
-opmodes/DriveyMcDriverson    teleop entry point
-opmodes/AutoMcAutty          autonomous entry point
-subsystems/PedroDrive        mecanum + Pedro + dashboard drawing
-subsystems/Sensors           the only telemetry flush
-commands/Drive               default teleop drive
-commands/DriveAbstract       base for all movement commands
-utils/Constants              every hardware name and tunable number
+MyRobot.java               subsystems, button bindings, auto plan
+
+commands/Drive             default teleop drive
+commands/DriveAbstract     base for all movement commands
+commands/DriveToPose       ├ go stand exactly there
+commands/DriveFwdByDist    └ go that way N inches
+
+subsystems/PedroDrive      mecanum + Pedro + dashboard drawing
+subsystems/Sensors         the only telemetry flush
+
+utils/Constants            every hardware name and tunable number
+utils/DriveyMcDriverson    teleop entry point
+utils/AutoMcAutty          autonomous entry point
+utils/Tuning               the 17 drivetrain tuners
 ```
+
+OpModes live in `utils/`. Don't add a fourth folder.
 
 `ExampleSubsystem` and `ExampleCommand` are templates. Copy them for this year's mechanisms, then
 delete them.
 
 Tuning the drivetrain: [tuning.md](tuning.md). Deeper theory the code doesn't duplicate:
 the team [GitBook](https://gilmour.online/compsci/competitive-robotics/software-team).
+
+SolversLib supplies `Robot`, `CommandOpMode`, `SubsystemBase`, and `CommandBase` — it's a Gradle
+dependency, not code we own. Pedro Pathing supplies the follower. Neither is forked; both update by
+version bump ([updating-from-upstream.md](updating-from-upstream.md)).

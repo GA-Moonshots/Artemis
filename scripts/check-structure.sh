@@ -18,6 +18,10 @@ cd "$(git rev-parse --show-toplevel 2>/dev/null)" || {
 }
 
 # Files and folders upstream owns. See AGENTS.md for the reasoning.
+#
+# Upstream is FIRST-Tech-Challenge/FtcRobotController — the SDK itself.
+# TeamCode/build.gradle is deliberately NOT on this list: FIRST ships it
+# nearly empty and expects teams to add dependencies there, so it's ours.
 PROTECTED=(
     "README.md"
     "build.gradle"
@@ -30,10 +34,25 @@ PROTECTED=(
     "gradle"
     "FtcRobotController"
     ".github"
-    "TeamCode/build.gradle"
-    "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/pedroPathing"
-    "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/samples"
 )
+
+# Deliberate, permanent exceptions. FIRST ships compileSdkVersion 30, which is
+# too low for our dependency set — the build fails outright without this bump.
+# So these two files carry a known edit. They're reported as a note, not an
+# error, because a warning that never goes away is a warning everyone ignores.
+# If you add to this list, write down WHY, right here.
+ALLOWED_DRIFT=(
+    "build.common.gradle"                 # compileSdk 34 (FIRST ships 30 — won't build)
+    "FtcRobotController/build.gradle"     # compileSdk 34, same reason
+)
+
+is_allowed() {
+    local f="$1" a
+    for a in "${ALLOWED_DRIFT[@]}"; do
+        [ "$f" = "$a" ] && return 0
+    done
+    return 1
+}
 
 RED=$'\033[0;31m'; YELLOW=$'\033[0;33m'; GREEN=$'\033[0;32m'; DIM=$'\033[2m'; OFF=$'\033[0m'
 problems=0
@@ -70,12 +89,23 @@ else
     base=$(git merge-base HEAD upstream/master 2>/dev/null)
     if [ -n "$base" ]; then
         drift=$(git diff --name-only "$base" HEAD -- "${PROTECTED[@]}" 2>/dev/null)
-        if [ -n "$drift" ]; then
+        unexpected=""; known=""
+        while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            if is_allowed "$f"; then known+="    $f"$'\n'; else unexpected+="    $f"$'\n'; fi
+        done <<< "$drift"
+
+        if [ -n "$unexpected" ]; then
             echo "${RED}✗ Committed edits to files upstream owns:${OFF}"
-            echo "$drift" | sed 's/^/    /'
+            printf '%s' "$unexpected"
             echo "${DIM}    These will fight the next upstream merge. See docs/updating-from-upstream.md${OFF}"
             echo
             problems=$((problems + 1))
+        fi
+        if [ -n "$known" ]; then
+            echo "${DIM}· Known deviations (deliberate, see ALLOWED_DRIFT in this script):${OFF}"
+            printf "${DIM}%s${OFF}" "$known"
+            echo
         fi
     fi
 fi

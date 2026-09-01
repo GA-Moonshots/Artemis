@@ -29,7 +29,13 @@ grep "com.android.tools.build:gradle" build.gradle              # AGP
 grep -E "compileSdk|minSdkVersion|targetSdkVersion" build.common.gradle
 ```
 
-As of 2026-08-29: Gradle 8.9, AGP 8.7.0, compileSdk 34, minSdk 24, targetSdk 28, Java 1.8.
+As of 2026-08-29: **Gradle 9.1.0, AGP 8.13.2, SDK v11.2.1**, compileSdk 34, minSdk 24,
+targetSdk 28, Java 1.8.
+
+> ⚠️ **AGP 8.13.2 needs a recent Android Studio.** Older installs will refuse to sync this project
+> with a message about the Android Gradle Plugin version. If Gradle sync fails on a machine that
+> worked last season, updating Android Studio is the first thing to try — this is the one case
+> where the answer really is "update the IDE."
 
 Cross-reference AGP against Android Studio's
 [compatibility table](https://developer.android.com/build/releases/gradle-plugin#agp-plugin-versions)

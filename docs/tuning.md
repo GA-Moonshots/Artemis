@@ -3,6 +3,10 @@
 Everything here happens in one OpMode: **"Tuning"** (group: Pedro Pathing) on the Driver Station.
 It opens a menu. The folders below match that menu exactly.
 
+The tuners live in [`utils/Tuning.java`](../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/utils/Tuning.java)
+— one file, 17 classes. It came from the old SolversLib Quickstart and is ours to maintain now, so
+it points at our own `utils/Constants` rather than a stub.
+
 Budget 60–90 minutes. Do it in order — each phase assumes the ones above it are done, and tuning
 PIDs before velocities means tuning them twice.
 

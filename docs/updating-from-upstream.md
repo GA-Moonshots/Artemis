@@ -1,33 +1,60 @@
-# Pulling the new season's SDK
+# Updates: two kinds, two mechanisms
+
+Artemis pulls from two directions, and they work completely differently. Knowing which is which
+saves you from merging something that was never meant to be merged.
+
+## 1. The FTC SDK — a merge, once a season
+
+`upstream` is **`FIRST-Tech-Challenge/FtcRobotController`**: the SDK itself, straight from FIRST.
 
 ```bash
 git fetch upstream
 git merge upstream/master
 ```
 
-`upstream` is `FTC-23511/SolversLib-Quickstart`, which itself tracks FIRST's `FtcRobotController`.
+FIRST's `TeamCode` holds only a `readme.md`, so their releases barely touch our code. Expect
+changes in `FtcRobotController/`, the root `build*.gradle` files, and `gradle/`.
 
-## What should happen: nothing dramatic
+## 2. Libraries — a version bump, any time
 
-`README.md`, the `build*.gradle` files, `gradle/`, `FtcRobotController/`, and TeamCode's
-`pedroPathing/` and `samples/` are all upstream's. We've never hand-edited them, so they merge
-clean. Our layer — `docs/`, `MOONSHOTS.md`, `AGENTS.md`, `CLAUDE.md`, and the `utils/`,
-`subsystems/`, `commands/`, `opmodes/` packages — is invisible to upstream and untouched.
+SolversLib, Pedro Pathing, Panels, and FTC Dashboard are **dependencies, not forks.** They live as
+version numbers in `TeamCode/build.gradle`:
 
-## Where a conflict is genuinely expected
+```gradle
+implementation "org.solverslib:core:0.3.5"
+implementation "org.solverslib:pedroPathing:0.3.5"
+implementation 'com.pedropathing:ftc:2.0.6'
+implementation "com.bylazar:fullpanels:1.0.12"
+```
 
-**`TeamCode/build.gradle`** — ships from upstream *and* is the file FTC's own convention says teams
-should customize. We haven't needed to (SolversLib, Pedro, Dashboard, and Panels are already in
-it), but if we ever add a dependency, expect to merge this one by hand.
+Change the number, rebuild, done. No merge, no conflict, nothing to resolve. Latest versions:
+[SolversLib releases](https://github.com/FTC-23511/SolversLib/releases) ·
+[Pedro Pathing](https://pedropathing.com).
 
-A conflict anywhere else means something got edited that shouldn't have been. Check the never-edit
-list in [AGENTS.md](../AGENTS.md), and fix the layout rather than just the conflict.
+Bump one at a time and build in between. When something breaks you want to know which one did it.
 
-## After merging
+## Known deviations from upstream
 
-1. `./gradlew :TeamCode:compileDebugJavaWithJavac` — catch API changes immediately.
-2. Re-check [gradle-and-android-studio.md](gradle-and-android-studio.md); Gradle, AGP, and
-   compileSdk all move with upstream, and Android Studio's requirements move independently.
-3. SolversLib or Pedro major version bump? Skim their changelogs — `PedroDrive` and `DriveAbstract`
-   are where breakage would land.
-4. Anything surprising goes in [issue-log.md](issue-log.md).
+Two files carry a deliberate edit, and `check-structure.sh` reports them as expected rather than
+as errors:
+
+| File | Why |
+|---|---|
+| `build.common.gradle` | `compileSdk 34` — FIRST ships 30, which **fails to build** with our dependencies |
+| `FtcRobotController/build.gradle` | same |
+
+If a merge reverts those to 30, the build breaks immediately with "Recommended action: Update this
+project to use a newer compileSdk." Put 34 back.
+
+## After any update
+
+1. `./scripts/build.sh` — catch API changes immediately.
+2. `./scripts/check-structure.sh` — confirm nothing drifted beyond the two known deviations.
+3. Surprises go in [issue-log.md](issue-log.md).
+
+## Why not fork SolversLib?
+
+It's a library — `core`, `pedroPathing`, `photon` modules published to Maven. It contains no
+Android app, so nothing in it installs on a Control Hub. Forking it to get a robot project is like
+forking React to get a website. Fork it only if you intend to modify the library itself; consume it
+as a dependency otherwise.
