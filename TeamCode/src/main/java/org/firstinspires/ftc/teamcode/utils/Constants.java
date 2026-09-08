@@ -48,9 +48,6 @@ public class Constants {
 
     public static final String IMU_NAME = "imu";
 
-    /** Template — rename when you build this year's actual mechanism. */
-    public static final String EXAMPLE_SERVO_NAME = "exampleServo";
-
     // ============================================================
     //                    MOTOR DIRECTIONS
     //  ⚙ TUNE: prop the robot on a block, drive forward, watch the wheels.
@@ -132,7 +129,7 @@ public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
             /** ⚙ TUNE: weigh the robot in kg, battery included. Do this first —
              *  it's the one value you measure instead of tuning. */
-            .mass(13.0)
+            .mass(5.9) // 13 lbs
 
             /** Secondary PIDs are for fine-tuning after everything else works.
              *  Leave false until someone can explain why they're turning it on. */

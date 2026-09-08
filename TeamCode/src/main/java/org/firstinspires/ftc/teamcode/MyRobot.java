@@ -16,8 +16,6 @@ import org.firstinspires.ftc.teamcode.commands.Drive;
 import org.firstinspires.ftc.teamcode.commands.DriveFwdByDist;
 import org.firstinspires.ftc.teamcode.commands.DriveTurnBy;
 import org.firstinspires.ftc.teamcode.commands.DriveTurnTo;
-import org.firstinspires.ftc.teamcode.commands.ExampleCommand;
-import org.firstinspires.ftc.teamcode.subsystems.ExampleSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.PedroDrive;
 import org.firstinspires.ftc.teamcode.subsystems.Sensors;
 import org.firstinspires.ftc.teamcode.utils.PersistentPoseManager;
@@ -55,7 +53,6 @@ public class MyRobot extends Robot {
     // Subsystems
     public PedroDrive drive;
     public Sensors sensors;
-    public ExampleSubsystem grabber;  // template — swap for this year's mechanisms
 
     public Pose startPose;
 
@@ -106,9 +103,8 @@ public class MyRobot extends Robot {
         // Sensors first — everything else wants to log to it.
         sensors = new Sensors(this);
         drive = new PedroDrive(this, startPose);
-        grabber = new ExampleSubsystem(this);
 
-        register(drive, sensors, grabber);
+        register(drive, sensors);
     }
 
     // ============================================================
@@ -142,9 +138,9 @@ public class MyRobot extends Robot {
         new GamepadButton(player1, GamepadKeys.Button.X)
                 .whenPressed(new DriveFwdByDist(this, 12, 3));
 
-        // Y — snap to face downfield. Absolute heading, so it works from any angle.
+        // Y — turn by 90 degrees
         new GamepadButton(player1, GamepadKeys.Button.Y)
-                .whenPressed(new DriveTurnTo(this, 90, 3));
+                .whenPressed(new DriveTurnBy(this, 90, 3));
 
         // Bumper-free 180: useful when a driver gets turned around.
         new GamepadButton(player1, GamepadKeys.Button.DPAD_DOWN)
@@ -171,12 +167,10 @@ public class MyRobot extends Robot {
         */
 
         // A — instant action, no Command needed. Servo flips are immediate.
-        new GamepadButton(player2, GamepadKeys.Button.A)
-                .whenPressed(new InstantCommand(() -> grabber.toggle()));
+        new GamepadButton(player2, GamepadKeys.Button.A);
 
         // Y — a real Command, because this one takes time to finish.
-        new GamepadButton(player2, GamepadKeys.Button.Y)
-                .whenPressed(new ExampleCommand(this));
+        new GamepadButton(player2, GamepadKeys.Button.Y);
 
         // Bind this year's intake / launcher / arm the same way, then delete
         // the two grabber bindings above.
