@@ -56,12 +56,11 @@ commands/DriveFwdByDist      ├ go that way N inches
 commands/DriveTurnBy         ├ rotate N degrees
 commands/DriveTurnTo         └ face this heading
 
-subsystems/PedroDrive        mecanum + Pedro — tune it, don't rewrite it
+subsystems/PedroDrive        mecanum + Pedro + dashboard drawing — tune it, don't rewrite it
 subsystems/Sensors           every shared sensor, the Limelight, AND the only telemetry flush
 
 utils/Constants              hardware names, motor directions, follower config (final)
 utils/Tunables               values you edit live from the dashboard (not final)
-utils/FieldView              everything drawn on the dashboard, incl. frame markers
 utils/FieldMap               tag positions + every coordinate conversion
 utils/PersistentPoseManager  auto → teleop pose handoff
 utils/DriveyMcDriverson      teleop entry point
@@ -70,8 +69,9 @@ utils/CameraCalibration      is the camera telling the truth?
 utils/Tuning                 the 17 drivetrain tuners
 ```
 
-Adding a mechanism? Copy `ExampleSubsystem` / `ExampleCommand`. Adding a movement? Extend
-`DriveAbstract` — and give it a real timeout.
+Adding a mechanism? Follow `PedroDrive`'s shape — hardware lookups in the constructor, hardware
+names from `Constants`, small methods that each do one thing. Adding a movement? Extend
+`DriveAbstract`, and give it a real timeout.
 
 ## Rule 4: numbers have exactly one home
 

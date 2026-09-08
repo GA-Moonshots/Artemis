@@ -6,6 +6,41 @@ Format: `## YYYY-MM-DD — title`, then what broke, why, and the fix.
 
 ---
 
+## 2026-09-08 — Localization dead: Panels frozen, tuner never slows down
+
+Two symptoms, one cause. The Forward Zero Power tuner builds its OWN follower from
+`Constants.createFollower()` and touches none of our subsystem code — so the fact that it failed
+*too* ruled out `PedroDrive`, `Drive`, and the drawing code immediately, and pointed at localization.
+
+Ruled out by reading the libraries, not guessing:
+- **Bulk caching is NOT the culprit.** `MANUAL` mode freezes sensors if nobody clears the cache,
+  but SolversLib's `CommandScheduler.run()` calls `clearBulkCache()` at the end of every loop when
+  the mode is MANUAL. Verified in its source.
+- **`PINPOINT_NAME` was an invisible default.** Pedro defaults `hardwareMapName` to `"pinpoint"`
+  internally and we never set it, so a config named anything else would fail silently. Now set
+  explicitly in `Constants`.
+
+Added `Pinpoint Doctor` (Diagnostics group): a plain LinearOpMode that reads the device directly —
+no Pedro, no SolversLib, no MyRobot — reporting device id, `DeviceStatus`, update rate, and raw
+encoder ticks. Push the robot; if ticks move, the sensor is fine and the fault is above it.
+Playbook: [diagnostics.md](diagnostics.md).
+
+**Retracted a bad lead.** I flagged `encoderResolution` (`goBILDA_SWINGARM_POD`) as suspect.
+Checked Ganymede on GitHub: its Pinpoint block is byte-for-byte identical to ours — same pods,
+offsets, and directions — and it worked all last season. So the pod type is right, and config is
+not what changed. Ganymede is a useful control whenever localization misbehaves: same team, same
+hardware, known-good numbers.
+
+**What did change:** Ganymede ran SDK 11.1; Artemis is on 11.2.1 with Pedro 2.0.6. If the Doctor
+reports READY with ticks moving — sensor and config both fine — that version seam is the next
+place to look, not our subsystem code.
+
+**Also fixed today, unrelated but noisy:** `check-structure.sh` reported 13 files as drift. All
+false. The `upstream` remote had reverted to the SolversLib Quickstart, so the script was comparing
+our FIRST-based tree against the wrong repo. Remote repointed at FIRST, and the script now refuses
+to run that check at all when `upstream` isn't FIRST's SDK — a checker that cries wolf is worse
+than no checker.
+
 ## 2026-08-29 — Migrated upstream: Quickstart → FIRST's SDK
 
 The SolversLib Quickstart hadn't been touched since February and held us at SDK v11.1. Repointed

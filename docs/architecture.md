@@ -85,12 +85,11 @@ commands/DriveFwdByDist      ├ go that way N inches
 commands/DriveTurnBy         ├ rotate N degrees
 commands/DriveTurnTo         └ face this heading
 
-subsystems/PedroDrive        mecanum + Pedro localization
+subsystems/PedroDrive        mecanum + Pedro + all dashboard drawing
 subsystems/Sensors           shared sensors, the Limelight, the only telemetry flush
 
 utils/Constants              hardware names, directions, follower config (final)
 utils/Tunables               live-editable from the dashboard (not final)
-utils/FieldView              all dashboard drawing, incl. frame markers
 utils/FieldMap               tag positions + coordinate conversions
 utils/PersistentPoseManager  auto → teleop pose handoff
 utils/DriveyMcDriverson      teleop entry point
@@ -101,8 +100,9 @@ utils/Tuning                 the 17 drivetrain tuners
 
 OpModes live in `utils/`. Don't add a fourth folder.
 
-`ExampleSubsystem` and `ExampleCommand` are templates. Copy them for this year's mechanisms, then
-delete them.
+Adding this year's mechanism? Copy the shape of `PedroDrive` (hardware lookups in the constructor,
+small methods that each do one thing) and pair it with a command extending `DriveAbstract` or
+`CommandBase`.
 
 Coordinates and the frame of reference: [coordinates.md](coordinates.md) — read it before writing
 a path. Tuning the drivetrain: [tuning.md](tuning.md). Deeper theory the code doesn't duplicate:

@@ -39,12 +39,12 @@ Last season this produced hand-fudged field bounds like `Y from -86 to 144` on a
 Those numbers weren't wrong so much as *derived from the wrong frame and then patched until they
 matched*.
 
-We pin the preset in code — [`FieldView`](../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/utils/FieldView.java)
+We pin the preset in code — [`PedroDrive`](../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/PedroDrive.java)
 sets it at construction — so the dropdown can't silently disagree.
 
 ## Checking it in two seconds
 
-`FieldView` draws the frame itself, every loop. Look at the dashboard:
+`PedroDrive` draws the frame itself, every loop. Look at the dashboard:
 
 | You should see | Meaning |
 |---|---|
@@ -75,9 +75,9 @@ If it drives somewhere else, the mismatch is between Pedro and Panels — not yo
 
 | Source | Its frame | Where we convert |
 |---|---|---|
-| Panels canvas | centre origin, rotated, Y-flipped | `FieldView` (preset, pinned in code) |
-| Limelight botpose | metres, centre origin | *Tier 3 — one conversion, one place* |
-| FTC SDK AprilTag | inches, centre origin (±72) | *Tier 3* |
+| Panels canvas | centre origin, rotated, Y-flipped | `PedroDrive` (preset, pinned in code) |
+| Limelight botpose | metres, centre origin | `FieldMap.limelightToPedro()` |
+| FTC SDK AprilTag | inches, centre origin (±72) | `FieldMap.ftcToPedro()` |
 
 The rule: **convert once, at the edge.** A conversion buried in the middle of a command is a bug
 waiting for a Saturday.

@@ -109,6 +109,13 @@ public class Sensors extends SubsystemBase {
         addTelemetry("═══ Health ═══", "");
         addTelemetry("Match (s)", "%.0f", matchClock.seconds());
         addTelemetry("Loop (ms)", "%.1f  (worst %.1f)", loopMs, worstLoopMs);
+
+        // If the field drawing gave up, say so. A blank map with no explanation
+        // sends people hunting for a localization bug that isn't there.
+        String drawFail = robot.drive == null ? null : robot.drive.drawingDisabledReason();
+        if (drawFail != null) {
+            addTelemetry("Panels drawing", "OFF — " + drawFail);
+        }
         reportVision();
 
         // The one flush. Sends to Panels and the Driver Station together.
@@ -270,7 +277,7 @@ public class Sensors extends SubsystemBase {
         // than theoretical.
         if (Tunables.SHOW_TAGS) {
             for (FieldMap.Tag tag : FieldMap.localizationTags()) {
-                robot.drive.view.drawTagSighting(tag.x, tag.y, robot.drive.getPose());
+                robot.drive.drawTagSighting(tag.x, tag.y);
             }
         }
     }

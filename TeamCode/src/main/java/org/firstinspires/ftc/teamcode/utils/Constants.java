@@ -48,6 +48,18 @@ public class Constants {
 
     public static final String IMU_NAME = "imu";
 
+    /**
+     * The odometry computer's name in the Driver Station config.
+     *
+     * Pedro defaults this to "pinpoint" internally. We set it explicitly
+     * anyway: a name that only exists as a library default is invisible when
+     * it's wrong, and "configured under a different name" is the most common
+     * reason a correctly-wired Pinpoint reports nothing. Run the Pinpoint
+     * Doctor OpMode — it looks under this name AND under any other, and tells
+     * you if they disagree.
+     */
+    public static final String PINPOINT_NAME = "pinpoint";
+
     // ============================================================
     //                    MOTOR DIRECTIONS
     //  ⚙ TUNE: prop the robot on a block, drive forward, watch the wheels.
@@ -215,6 +227,7 @@ public class Constants {
     //  └───────────────────────────────────────────────────────────────────┘
 
     public static PinpointConstants localizerConstants = new PinpointConstants()
+            .hardwareMapName(PINPOINT_NAME)
             /** ⚙ TUNE: pod offsets from robot CENTER, in inches. Measure, don't guess. */
             .forwardPodY(3)
             .strafePodX(-9)

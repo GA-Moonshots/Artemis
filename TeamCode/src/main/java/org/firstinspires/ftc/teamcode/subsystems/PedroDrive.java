@@ -1,7 +1,12 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.bylazar.field.FieldManager;
+import com.bylazar.field.PanelsField;
+import com.bylazar.field.Style;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.math.Vector;
+import com.pedropathing.util.PoseHistory;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -9,7 +14,6 @@ import com.seattlesolvers.solverslib.command.SubsystemBase;
 
 import org.firstinspires.ftc.teamcode.MyRobot;
 import org.firstinspires.ftc.teamcode.utils.Constants;
-import org.firstinspires.ftc.teamcode.utils.FieldView;
 import org.firstinspires.ftc.teamcode.utils.Tunables;
 
 /**
@@ -49,12 +53,42 @@ public class PedroDrive extends SubsystemBase {
     private double driveSpeed = Constants.DEFAULT_DRIVE_SPEED;
 
     // ============================================================
-    //                    DASHBOARD
-    //  All drawing lives in FieldView — including the frame markers that tell
-    //  you whether Panels and Pedro even agree on where (0,0) is.
+    //                    DASHBOARD DRAWING
     // ============================================================
+    //
+    //  Panels' canvas and Pedro's field are NOT the same coordinate system.
+    //
+    //     Pedro:  0..144 inches, origin at a CORNER, 0 rad = +X
+    //     Panels: origin at the field CENTRE
+    //
+    //  The bridge is a preset, and it is not a small adjustment:
+    //
+    //     offsetX -72, offsetY -72, rotation 90°, flipY true
+    //
+    //  A shift, a rotation, AND a mirror. If the preset picked in the Panels UI
+    //  doesn't match the one we push from code, hovering the map hands you a
+    //  number in a different frame than the robot drives in — self-consistent,
+    //  and completely wrong. That's why we pin it here instead of trusting the
+    //  dropdown, and why drawFrameMarkers() exists. See docs/coordinates.md.
 
-    public final FieldView view = new FieldView();
+    private static final double ROBOT_RADIUS = 9.0;
+    private static final Style RED_ROBOT   = new Style("", "#EF5350", 3.0);
+    private static final Style BLUE_ROBOT  = new Style("", "#42A5F5", 3.0);
+    private static final Style BREADCRUMBS = new Style("", "#81C784", 2.0);
+    private static final Style TARGET      = new Style("", "#FFB300", 2.0);
+    private static final Style AXIS_X      = new Style("", "#E53935", 3.0);  // +X, red
+    private static final Style AXIS_Y      = new Style("", "#43A047", 3.0);  // +Y, green
+    private static final Style LANDMARK    = new Style("", "#9E9E9E", 2.0);
+
+    private FieldManager panels;
+    private boolean drawingEnabled = true;
+
+    /**
+     * Why drawing switched itself off, if it did. A blank map with no
+     * explanation sends people hunting a localization bug that isn't there,
+     * so Sensors puts this on telemetry.
+     */
+    private String drawingDisabledReason = null;
 
     /** Where the active command is trying to go. Null when nothing is driving. */
     private Pose targetPose = null;
@@ -98,6 +132,16 @@ public class PedroDrive extends SubsystemBase {
         // ============ Pedro ============
         follower = Constants.createFollower(robot.hardwareMap);
         follower.setStartingPose(startPose);
+
+        // ============ Dashboard ============
+        try {
+            panels = PanelsField.INSTANCE.getField();
+            // Pin the frame in code. Do not rely on the dashboard dropdown.
+            panels.setOffsets(PanelsField.INSTANCE.getPresets().getPEDRO_PATHING());
+        } catch (Exception e) {
+            // No dashboard? Fine. Drawing is a luxury; driving is not.
+            disableDrawing("no dashboard at startup: " + e.getClass().getSimpleName());
+        }
     }
 
     // ============================================================
@@ -207,22 +251,126 @@ public class PedroDrive extends SubsystemBase {
     }
 
     // ============================================================
-    //                    PANELS DRAWING
+    //                    DRAWING
     // ============================================================
 
     /**
-     * One draw pass per loop. Order matters only for what ends up on top.
-     * Every piece is individually switchable from the dashboard via Tunables,
-     * so a busy canvas can be thinned without a redeploy.
+     * One draw pass per loop. Each piece is switchable from the dashboard via
+     * Tunables, so a busy canvas can be thinned without a redeploy.
      */
     private void draw() {
-        if (Tunables.SHOW_FRAME_MARKERS) view.drawFrameMarkers();
-        if (Tunables.SHOW_BREADCRUMBS)   view.drawBreadcrumbs(follower.getPoseHistory());
-        if (Tunables.SHOW_TARGET && targetPose != null) {
-            view.drawTarget(targetPose, getPose());
+        if (!drawingEnabled || panels == null) return;
+
+        try {
+            if (Tunables.SHOW_FRAME_MARKERS) drawFrameMarkers();
+            if (Tunables.SHOW_BREADCRUMBS)   drawBreadcrumbs(follower.getPoseHistory());
+            if (Tunables.SHOW_TARGET && targetPose != null) drawTarget(targetPose);
+            drawRobot(getPose());
+            panels.update();
+        } catch (Exception e) {
+            disableDrawing("draw failed: " + e.getClass().getSimpleName());
         }
-        view.drawRobot(getPose(), robot.isRed);
-        view.send();
+    }
+
+    /**
+     * Draws the coordinate frame itself. This is the two-second test for
+     * "does Panels agree with Pedro about where (0,0) is?"
+     *
+     * If the frame is right you should see:
+     *   • a grey dot in a field CORNER          (Pedro's 0,0)
+     *   • a RED arm running 24" along +X
+     *   • a GREEN arm running 24" along +Y
+     *   • a grey dot dead centre                (72,72)
+     *   • a grey dot in the opposite corner     (144,144)
+     *
+     * Anything else means the frame is wrong, and every coordinate you write
+     * from here is fiction. These draw at fixed coordinates, so they appear
+     * even when localization is dead — which makes them the fastest way to
+     * tell a drawing problem from a Pinpoint problem.
+     */
+    private void drawFrameMarkers() {
+        panels.setStyle(AXIS_X);
+        panels.moveCursor(0, 0);
+        panels.line(24, 0);
+
+        panels.setStyle(AXIS_Y);
+        panels.moveCursor(0, 0);
+        panels.line(0, 24);
+
+        panels.setStyle(LANDMARK);
+        panels.moveCursor(0, 0);
+        panels.circle(3);
+        panels.moveCursor(72, 72);
+        panels.circle(3);
+        panels.moveCursor(144, 144);
+        panels.circle(3);
+    }
+
+    /** Circle for the body, line for the nose. Coloured by alliance. */
+    private void drawRobot(Pose pose) {
+        if (!isSane(pose)) return;
+
+        Style style = robot.isRed ? RED_ROBOT : BLUE_ROBOT;
+        panels.setStyle(style);
+        panels.moveCursor(pose.getX(), pose.getY());
+        panels.circle(ROBOT_RADIUS);
+
+        Vector heading = pose.getHeadingAsUnitVector();
+        heading.setMagnitude(heading.getMagnitude() * ROBOT_RADIUS);
+
+        panels.setStyle(style);
+        panels.moveCursor(pose.getX() + heading.getXComponent() / 2,
+                          pose.getY() + heading.getYComponent() / 2);
+        panels.line(pose.getX() + heading.getXComponent(),
+                    pose.getY() + heading.getYComponent());
+    }
+
+    /** Where we've been this match. */
+    private void drawBreadcrumbs(PoseHistory history) {
+        if (history == null) return;
+        double[] xs = history.getXPositionsArray();
+        double[] ys = history.getYPositionsArray();
+        if (xs == null || ys == null) return;
+
+        panels.setStyle(BREADCRUMBS);
+        int size = Math.min(xs.length, ys.length);
+        for (int i = 0; i < size - 1; i++) {
+            panels.moveCursor(xs[i], ys[i]);
+            panels.line(xs[i + 1], ys[i + 1]);
+        }
+    }
+
+    /** Where a command is trying to go, plus a line from where we are. */
+    private void drawTarget(Pose target) {
+        if (!isSane(target)) return;
+        panels.setStyle(TARGET);
+        panels.moveCursor(target.getX(), target.getY());
+        panels.circle(ROBOT_RADIUS / 2);
+
+        Pose current = getPose();
+        if (isSane(current)) {
+            panels.setStyle(TARGET);
+            panels.moveCursor(current.getX(), current.getY());
+            panels.line(target.getX(), target.getY());
+        }
+    }
+
+    /** An AprilTag we know about, and the line of sight to it. Called by Sensors. */
+    public void drawTagSighting(double tagX, double tagY) {
+        if (!drawingEnabled || panels == null) return;
+        try {
+            panels.setStyle(TARGET);
+            panels.moveCursor(tagX, tagY);
+            panels.rect(4, 4);
+
+            Pose current = getPose();
+            if (isSane(current)) {
+                panels.moveCursor(current.getX(), current.getY());
+                panels.line(tagX, tagY);
+            }
+        } catch (Exception e) {
+            disableDrawing("tag draw failed: " + e.getClass().getSimpleName());
+        }
     }
 
     /** Commands call this so the dashboard can show intent next to reality. */
@@ -232,6 +380,24 @@ public class PedroDrive extends SubsystemBase {
 
     public void clearTargetPose() {
         this.targetPose = null;
+    }
+
+    /** null while drawing is healthy. Sensors reports this. */
+    public String drawingDisabledReason() {
+        return drawingDisabledReason;
+    }
+
+    private void disableDrawing(String why) {
+        drawingEnabled = false;
+        if (drawingDisabledReason == null) drawingDisabledReason = why;
+    }
+
+    /** NaN poses appear when localization is confused; drawing one kills the canvas. */
+    private boolean isSane(Pose p) {
+        return p != null
+                && !Double.isNaN(p.getX())
+                && !Double.isNaN(p.getY())
+                && !Double.isNaN(p.getHeading());
     }
 
     // ============================================================

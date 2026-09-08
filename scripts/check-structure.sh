@@ -85,6 +85,16 @@ elif ! git rev-parse --verify --quiet upstream/master >/dev/null; then
     echo "${YELLOW}! Haven't fetched upstream yet — skipping the committed-drift check.${OFF}"
     echo "${DIM}    Fix: git fetch upstream${OFF}"
     echo
+elif ! git remote get-url upstream | grep -q "FtcRobotController"; then
+    # Guard against judging with the wrong yardstick. If `upstream` points at
+    # some other repo (it used to be the SolversLib Quickstart), every file the
+    # two repos legitimately differ on looks like our mistake — a dozen
+    # confident false alarms, which is worse than saying nothing.
+    echo "${YELLOW}! 'upstream' doesn't look like FIRST's SDK — skipping the committed-drift check.${OFF}"
+    echo "${DIM}    points at: $(git remote get-url upstream)${OFF}"
+    echo "${DIM}    expected:  https://github.com/FIRST-Tech-Challenge/FtcRobotController.git${OFF}"
+    echo "${DIM}    Fix: git remote set-url upstream https://github.com/FIRST-Tech-Challenge/FtcRobotController.git${OFF}"
+    echo
 else
     base=$(git merge-base HEAD upstream/master 2>/dev/null)
     if [ -n "$base" ]; then
