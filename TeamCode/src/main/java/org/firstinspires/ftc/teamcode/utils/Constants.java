@@ -201,8 +201,20 @@ public class Constants {
             .rightFrontMotorDirection(RIGHT_FRONT_DIRECTION)
             .rightRearMotorDirection(RIGHT_BACK_DIRECTION);
 
-    /** End T-value, timeout ms, position tolerance (in), heading tolerance (rad). */
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
+    /**
+     * ⚙ TUNE: How the robot decides a path is "done".
+     * tValue (0–1), velocity (in/s), translational (in), heading (rad), timeout (ms), braking strength, search limit, braking start.
+     */
+    public static PathConstraints pathConstraints = new PathConstraints(
+            0.99,   // Follow the path until it's 99% complete...
+            0.1,    // ...AND velocity is under 0.1 in/s
+            0.5,    // ...AND it is within 0.5 inches of the target
+            Math.toRadians(1.0), // ...AND within 1 degree of the target heading.
+            200,    // If we hit 99% but can't reach tolerances, give up after 100ms.
+            1.0,    // Braking strength (default 1)
+            10,     // Bezier search limit (default 10)
+            1.0     // Braking start (default 1)
+    );
 
     // ============================================================
     //                    PINPOINT LOCALIZATION
