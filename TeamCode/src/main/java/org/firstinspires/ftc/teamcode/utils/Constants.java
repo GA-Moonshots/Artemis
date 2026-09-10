@@ -151,11 +151,11 @@ public class Constants {
 
             /** ⚙ PHASE 1 — Automatic → Forward Zero Power Acceleration */
             // https://pedropathing.com/docs/pathing/tuning/automatic#forward-zero-power-acceleration
-            .forwardZeroPowerAcceleration(-45.0)
+            .forwardZeroPowerAcceleration(-55.58)
 
             /** ⚙ PHASE 2 — Automatic → Lateral Zero Power Acceleration */
             // https://pedropathing.com/docs/pathing/tuning/automatic#lateral-zero-power-acceleration
-            .lateralZeroPowerAcceleration(-90.0)
+            .lateralZeroPowerAcceleration(-57.45)
 
             /** ⚙ PHASE 5 — Manual → Translational. Shove the robot sideways;
              *  it should slide back without arguing with itself. P first. */
@@ -185,12 +185,12 @@ public class Constants {
     public static MecanumConstants mecanumConstants = new MecanumConstants()
             /** ⚙ PHASE 3 — Automatic → Forward Velocity (inches/sec at full power) */
             // https://pedropathing.com/docs/pathing/tuning/automatic#forward-velocity-tuner
-            .xVelocity(62.0)
+            .xVelocity(72.69)
             /** ⚙ PHASE 4 — Automatic → Lateral Velocity. Always lower than
              *  forward: mecanum wheels strafe by scrubbing sideways, which
              *  wastes most of what the motors are offering. */
             // https://pedropathing.com/docs/pathing/tuning/automatic#lateral-velocity-tuner
-            .yVelocity(49.0)
+            .yVelocity(60.12)
             .maxPower(MAX_DRIVE_POWER)
             .leftFrontMotorName(LEFT_FRONT_NAME)
             .leftRearMotorName(LEFT_BACK_NAME)
