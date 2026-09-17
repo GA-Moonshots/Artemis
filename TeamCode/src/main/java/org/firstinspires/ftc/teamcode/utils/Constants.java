@@ -174,8 +174,8 @@ public class Constants {
         /** ⚙ TUNE: Pinpoint Tuner measures these. xPodOffset is how far LEFT of
          *  centre the forward pod sits; yPodOffset is how far FORWARD the strafe
          *  pod sits. (Pedro 2 called these forwardPodY and strafePodX.) */
-        c.xPodOffset.set(3.0);
-        c.yPodOffset.set(-9.0);
+        c.xPodOffset.set(-3.654345114400068);
+        c.yPodOffset.set(4.175518666665385);
         c.offsetUnits.set(DistanceUnit.INCH);
         c.globalDistanceUnit.set(DistanceUnit.INCH);
 
@@ -189,42 +189,31 @@ public class Constants {
     //                    FORESIGHT (path following)
     // ============================================================
 
-    public static ForesightConfig foresightConfig = new ForesightConfig(c -> {
-        /** Measured on our robot under Pedro 2 (xVelocity / yVelocity and the
-         *  zero-power accelerations). Same physics, so a fair starting point —
-         *  the Foresight Tuner will measure them again. */
-        c.maxAchievableForwardVelocity.set(72.69);
-        c.maxAchievableStrafeVelocity.set(60.12);
-        c.naturalForwardDeceleration.set(55.58);
-        c.naturalStrafeDeceleration.set(57.45);
+    public static ForesightConfig foresightConfig = new ForesightConfig(
+            c -> {
+                Controller primaryTranslationalForward = Controller.proportional(1.3679162777331282);
+                Controller secondaryTranslationalForward = Controller.proportional(0.5054085132262731);
+                Controller primaryTranslationalLateral = Controller.proportional(0.4956660149135508);
+                Controller secondaryTranslationalLateral = Controller.proportional(0.1831353480707122);
 
-        /** ⚙ TUNE — NOT OUR ROBOT'S NUMBERS. Everything from here to the end
-         *  constraints is SolversLib's example robot, there only so the code
-         *  runs. The robot will drive on them, badly. Run the Foresight Tuner
-         *  and paste its output over this block before trusting a path. */
-        c.forwardTranslational.set(Controller.piecewise(Controller.proportional(0.1))
-                .put(2.5, Controller.proportional(0.3)));
-        c.strafeTranslational.set(Controller.piecewise(Controller.proportional(0.1))
-                .put(2.5, Controller.proportional(0.3)));
+                c.forwardTranslational.set(Controller.piecewise(secondaryTranslationalForward).put(2.5, primaryTranslationalForward));
+                c.strafeTranslational.set(Controller.piecewise(secondaryTranslationalLateral).put(2.5, primaryTranslationalLateral));
 
-        c.coast.set(Controller.proportionalFeedforward(0.010978350889324107));
-        c.brake.set(Controller.proportionalFeedforward(0.008731598255925491));
+                c.coast.set(Controller.proportionalFeedforward(0.015020759363507967));
+                c.brake.set(Controller.proportionalFeedforward(0.012767645458981772));
 
-        c.headingFeedback.set(Controller.proportional(5.258721785960744));
-        c.headingBrakeCoefficients.set(Vector2D.cartesian(0.05642143125655298, 0.0063829525363003695));
+                c.headingFeedback.set(Controller.proportional(2.0329097693560123));
+                c.headingBrakeCoefficients.set(Vector2D.cartesian(0.04920658954550176, 0.007028128200379804));
 
-        c.linearBrakeCoefficients.set(Matrix.diag(0.10605894992901523, 0.08719146175596092));
-        c.quadraticBrakeCoefficients.set(Matrix.diag(0.0014663966976606565, 0.0013837064502458813));
+                c.linearBrakeCoefficients.set(Matrix.diag(0.005705998681946106, 0.01432310470727969));
+                c.quadraticBrakeCoefficients.set(Matrix.diag(0.004523530787188707, 0.0032284093429526773));
 
-        /** ⚙ TUNE: how a path decides it's "done". Carried over from our Pedro 2
-         *  PathConstraints — the tuner doesn't touch these, so don't lose them
-         *  when you paste. */
-        c.parametricTConstraint.set(0.01);             // follow until 99% complete...
-        c.velocityConstraint.set(0.1);                 // ...AND slower than 0.1 in/s
-        c.translationalConstraint.set(0.5);            // ...AND within 0.5"
-        c.headingConstraint.set(Math.toRadians(1.0));  // ...AND within 1°
-        c.timeoutConstraint.set(200.0);                // can't settle? give up after 200ms
-    });
+                c.maxAchievableForwardVelocity.set(69.54036732293439);
+                c.maxAchievableStrafeVelocity.set(58.931081559691414);
+                c.naturalForwardDeceleration.set(67.53830889197948);
+                c.naturalStrafeDeceleration.set(75.77981882324022);
+            }
+    );
 
     // ============================================================
     //                    VISION / LIMELIGHT
