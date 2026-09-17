@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.utils;
 
-import com.pedropathing.geometry.Pose;
+import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.limelightvision.LLFieldMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -43,6 +43,13 @@ import java.util.List;
  * Expect entirely different ids, positions, sizes, and counts this season —
  * nothing below assumes otherwise, and nothing below should be edited when the
  * game changes.
+ *
+ * ⚠ BIOBUZZ (2026-27) BREAKS THAT FILTER. Its tags ship WITH field positions
+ * but move during the match, and some are grouped into "clusters" that the
+ * SDK reports separately. FIRST's own note: not suitable for absolute field
+ * localization. The positions below are where tags start, which is still
+ * useful for drawing and for aiming — just not for snapping odometry. That's
+ * why Tunables.VISION_CORRECTIONS_ENABLED defaults to false this season.
  *
  * How many localization tags a field has matters for the trust policy: DECODE
  * had only two, at opposite ends, so "require several tags at once" would

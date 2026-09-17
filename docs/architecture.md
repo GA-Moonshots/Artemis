@@ -95,7 +95,8 @@ utils/PersistentPoseManager  auto → teleop pose handoff
 utils/DriveyMcDriverson      teleop entry point
 utils/AutoMcAutty            autonomous entry point
 utils/CameraCalibration      is the camera telling the truth?
-utils/Tuning                 the 17 drivetrain tuners
+utils/Tuning                 Pedro AutoTune — tune from a browser, see docs/tuning.md
+utils/*Tuner, utils/Tests     the tuners it runs (copied from Pedro — don't edit)
 ```
 
 OpModes live in `utils/`. Don't add a fourth folder.

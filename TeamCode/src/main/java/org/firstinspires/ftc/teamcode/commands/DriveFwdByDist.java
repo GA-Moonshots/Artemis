@@ -1,8 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands;
 
-import com.pedropathing.geometry.BezierLine;
-import com.pedropathing.geometry.Pose;
-import com.pedropathing.paths.PathBuilder;
+import com.pedropathing.api.Paths;
+import com.pedropathing.math.Pose;
 
 import org.firstinspires.ftc.teamcode.MyRobot;
 import org.firstinspires.ftc.teamcode.utils.Tunables;
@@ -48,18 +47,16 @@ public class DriveFwdByDist extends DriveAbstract {
         arrived = false;
 
         Pose current = drive.getPose();
-        double heading = current.getHeading();
+        double heading = current.heading();
 
         targetPose = new Pose(
-                current.getX() + distance * Math.cos(heading),
-                current.getY() + distance * Math.sin(heading),
+                current.x() + distance * Math.cos(heading),
+                current.y() + distance * Math.sin(heading),
                 heading  // same direction we're already pointed
         );
 
-        PathBuilder path = new PathBuilder(follower)
-                .addPath(new BezierLine(current, targetPose))
-                .setConstantHeadingInterpolation(heading);
-        follower.followPath(path.build());
+        // A path with no heading rule throws the moment it's followed. constant() is the rule.
+        follower.follow(Paths.line(current, targetPose).constant(heading));
         drive.setTargetPose(targetPose);   // so the dashboard shows intent vs. reality
 
         robot.sensors.addTelemetry("FwdByDist", "%.1f\" @ %.1f°",
@@ -68,7 +65,7 @@ public class DriveFwdByDist extends DriveAbstract {
 
     @Override
     public void execute() {
-        if (follower.atPose(targetPose, Tunables.POSE_TOLERANCE, Tunables.POSE_TOLERANCE)) {
+        if (drive.atPose(targetPose, Tunables.POSE_TOLERANCE)) {
             arrived = true;
         }
     }

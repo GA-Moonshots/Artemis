@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.utils;
 
 import android.os.Environment;
 
-import com.pedropathing.geometry.Pose;
+import com.pedropathing.math.Pose;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -52,7 +52,7 @@ public class PersistentPoseManager {
     /** Call at the end of autonomous. Format: x,y,heading,isRed,timestampMillis */
     public static void save(Pose pose, boolean isRed) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(POSE_FILE))) {
-            writer.write(pose.getX() + "," + pose.getY() + "," + pose.getHeading()
+            writer.write(pose.x() + "," + pose.y() + "," + pose.heading()
                     + "," + isRed + "," + System.currentTimeMillis());
         } catch (Exception e) {
             // A failed handoff shouldn't take the OpMode down with it. Teleop

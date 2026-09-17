@@ -48,12 +48,11 @@ public abstract class DriveAbstract extends CommandBase {
     }
 
     /**
-     * Call from end(). Tells Pedro to stop chasing its path and cuts motor
-     * power — skip this and the follower keeps fighting the next command
-     * (or the driver's joystick, which is worse).
+     * Call from end(). Tells Pedro to stop chasing its path (or holding its
+     * turn) and cuts motor power — skip this and the follower keeps fighting
+     * the next command, or the driver's joystick, which is worse.
      */
     protected void standardCleanup() {
-        follower.breakFollowing();
         drive.stop();
     }
 }

@@ -1,16 +1,17 @@
 package org.firstinspires.ftc.teamcode.utils;
 
-import com.pedropathing.control.FilteredPIDFCoefficients;
-import com.pedropathing.control.PIDFCoefficients;
+import com.pedropathing.algorithm.Foresight;
+import com.pedropathing.algorithm.ForesightConfig;
+import com.pedropathing.controllers.Controller;
 import com.pedropathing.follower.Follower;
-import com.pedropathing.follower.FollowerConstants;
-import com.pedropathing.ftc.FollowerBuilder;
-import com.pedropathing.ftc.drivetrains.MecanumConstants;
-import com.pedropathing.ftc.localization.constants.PinpointConstants;
-import com.pedropathing.paths.PathConstraints;
+import com.pedropathing.math.Matrix;
+import com.pedropathing.math.Vector2D;
+import com.pedropathing.revhub.drivetrains.Mecanum;
+import com.pedropathing.revhub.drivetrains.MecanumConfig;
+import com.pedropathing.revhub.localizers.PinpointConfig;
+import com.pedropathing.revhub.localizers.PinpointLocalizer;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
-import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
@@ -28,10 +29,10 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
  * ║  new robot. See docs/tuning.md before your first real drive.              ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  *
- * Note: upstream ships a pedroPathing/Constants.java, but it's a stub that
- * configures no drivetrain and no localizer — a follower built from it can't
- * actually drive. This file is the real one. Ours, so upstream merges never
- * touch it.
+ * Pedro Pathing 3 note: the three configs below (drivetrain, localizer,
+ * Foresight) are exactly what AutoTune prints at the end of each tuner. Paste
+ * over the matching block — but keep the hardware NAMES pointing at the
+ * constants up top, so there's still only one place a name is typed.
  */
 public class Constants {
 
@@ -51,19 +52,17 @@ public class Constants {
     /**
      * The odometry computer's name in the Driver Station config.
      *
-     * Pedro defaults this to "pinpoint" internally. We set it explicitly
-     * anyway: a name that only exists as a library default is invisible when
-     * it's wrong, and "configured under a different name" is the most common
-     * reason a correctly-wired Pinpoint reports nothing. Run the Pinpoint
-     * Doctor OpMode — it looks under this name AND under any other, and tells
-     * you if they disagree.
+     * "Configured under a different name" is the most common reason a
+     * correctly-wired Pinpoint reports nothing. Run the Pinpoint Doctor
+     * OpMode — it looks under this name AND under any other, and tells you if
+     * they disagree.
      */
     public static final String PINPOINT_NAME = "pinpoint";
 
     // ============================================================
     //                    MOTOR DIRECTIONS
-    //  ⚙ TUNE: prop the robot on a block, drive forward, watch the wheels.
-    //  All four should spin the same way. Flip whichever ones lied to you.
+    //  ⚙ TUNE: AutoTune's Mecanum Tuner spins each wheel and tells you.
+    //  Or prop the robot on a block, drive forward, and flip whichever lied.
     // ============================================================
 
     public static final DcMotorSimple.Direction LEFT_FRONT_DIRECTION  = DcMotorSimple.Direction.REVERSE;
@@ -71,15 +70,17 @@ public class Constants {
     public static final DcMotorSimple.Direction RIGHT_FRONT_DIRECTION = DcMotorSimple.Direction.REVERSE;
     public static final DcMotorSimple.Direction RIGHT_BACK_DIRECTION  = DcMotorSimple.Direction.FORWARD;
 
-    /** BRAKE = stops dead. FLOAT = coasts like it's on ice. Keep BRAKE. */
-    public static final DcMotor.ZeroPowerBehavior DRIVE_ZERO_POWER_BEHAVIOR =
-            DcMotor.ZeroPowerBehavior.BRAKE;
+    /**
+     * Driver lets go of the sticks: true = stop dead, false = coast like it's
+     * on ice. Keep true. (Pedro coasts on purpose while following a path —
+     * this only covers teleop.)
+     */
+    public static final boolean BRAKE_WHEN_DRIVER_LETS_GO = true;
 
     // ============================================================
     //                    DRIVE FEEL
     // ============================================================
 
-    public static final double MAX_DRIVE_POWER = 1.0;
     public static final double MIN_DRIVE_SPEED = 0.2;
     public static final double MAX_DRIVE_SPEED = 1.0;
     public static final double DEFAULT_DRIVE_SPEED = 1.0;
@@ -96,7 +97,7 @@ public class Constants {
     // ============================================================
     //                    FIELD GEOMETRY
     //  Field is 144" x 144", origin at bottom-left. 0 rad points RIGHT.
-    //  Replace these with this year's actual scoring coordinates.
+    //  ⚙ BIOBUZZ: replace these with this year's actual scoring coordinates.
     // ============================================================
 
     public static final double BLUE_TARGET_X = 12;
@@ -105,76 +106,23 @@ public class Constants {
     public static final double RED_TARGET_Y  = 124;
 
     // ============================================================
-    //                    PEDRO FOLLOWER
+    //                    PEDRO PATHING 3
     // ============================================================
     //
     //  ┌───────────────────────────────────────────────────────────────────┐
-    //  │  THE TUNING SEQUENCE — DO THESE IN ORDER. ~60–90 MIN TOTAL.       │
+    //  │  THE TUNING SEQUENCE — AutoTune, in a browser, in this order.     │
+    //  │  Robot Wi-Fi → http://192.168.43.1:10158   (see utils/Tuning)     │
     //  │                                                                   │
-    //  │  Order matters: every phase assumes the ones above it are done.   │
-    //  │  Tuning the PIDs before the velocities means tuning them twice.   │
-    //  │                                                                   │
-    //  │  FIRST: verify localization (Pinpoint section below) or you'll    │
-    //  │  spend an hour tuning PIDs against numbers that were lying.       │
-    //  │                                                                   │
-    //  │  1. Forward Zero Power Accel   → forwardZeroPowerAcceleration     │
-    //  │     stops cleanly, no sliding                          5–10 min   │
-    //  │  2. Lateral Zero Power Accel   → lateralZeroPowerAcceleration     │
-    //  │     stops cleanly when strafing                        5–10 min   │
-    //  │  3. Forward Velocity           → xVelocity (mecanum)              │
-    //  │     displayed velocity matches real max speed          5–10 min   │
-    //  │  4. Lateral Velocity           → yVelocity (mecanum)              │
-    //  │     strafe velocity matches reality                    5–10 min   │
-    //  │  5. Translational PID          → translationalPIDFCoefficients    │
-    //  │     start with P only; smooth return, no oscillation  10–15 min   │
-    //  │  6. Heading PID                → headingPIDFCoefficients          │
-    //  │     start with P, maybe add D; no hunting             10–15 min   │
-    //  │  7. Drive PID                  → drivePIDFCoefficients            │
-    //  │     follows a path without weaving                    10–15 min   │
-    //  │  8. Centripetal Force          → centripetalScaling               │
-    //  │     cuts corners? swings wide? adjust                 10–15 min   │
+    //  │  1. Mecanum Tuner    → drivetrainConfig          ~5 min           │
+    //  │  2. Pinpoint Tuner   → localizerConfig           ~10 min          │
+    //  │        then run the four push/rotate checks below BY HAND         │
+    //  │  3. Foresight Tuner  → foresightConfig           ~30–45 min       │
+    //  │        needs 1 and 2 pasted in and deployed first                 │
+    //  │  4. Tests            → confirms all of the above                  │
     //  │                                                                   │
     //  │  Full walkthrough: docs/tuning.md                                 │
     //  │  Official docs:    https://pedropathing.com/docs/pathing/tuning   │
     //  └───────────────────────────────────────────────────────────────────┘
-
-    public static FollowerConstants followerConstants = new FollowerConstants()
-            /** ⚙ TUNE: weigh the robot in kg, battery included. Do this first —
-             *  it's the one value you measure instead of tuning. */
-            .mass(5.9) // 13 lbs
-
-            /** Secondary PIDs are for fine-tuning after everything else works.
-             *  Leave false until someone can explain why they're turning it on. */
-            .useSecondaryTranslationalPIDF(false)
-            .useSecondaryHeadingPIDF(false)
-            .useSecondaryDrivePIDF(false)
-
-            /** ⚙ PHASE 1 — Automatic → Forward Zero Power Acceleration */
-            // https://pedropathing.com/docs/pathing/tuning/automatic#forward-zero-power-acceleration
-            .forwardZeroPowerAcceleration(-55.58)
-
-            /** ⚙ PHASE 2 — Automatic → Lateral Zero Power Acceleration */
-            // https://pedropathing.com/docs/pathing/tuning/automatic#lateral-zero-power-acceleration
-            .lateralZeroPowerAcceleration(-57.45)
-
-            /** ⚙ PHASE 5 — Manual → Translational. Shove the robot sideways;
-             *  it should slide back without arguing with itself. P first. */
-            // https://pedropathing.com/docs/pathing/tuning/pids/translational
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.08, 0, 0.005, 0.035))
-
-            /** ⚙ PHASE 6 — Manual → Heading. Twist the robot; it should snap
-             *  back once, not hunt back and forth. */
-            // https://pedropathing.com/docs/pathing/tuning/pids/heading
-            .headingPIDFCoefficients(new PIDFCoefficients(0.9, 0, 0.02, 0.03))
-
-            /** ⚙ PHASE 7 — Manual → Drive. Only after the others behave. */
-            // https://pedropathing.com/docs/pathing/tuning/pids/drive
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.003, 0, 0.0001, 0, 0.3))
-
-            /** ⚙ PHASE 8 — Manual → Centripetal. Range 0.001–0.01.
-             *  Cutting inside corners? Raise it. Swinging wide? Lower it. */
-            // https://pedropathing.com/docs/pathing/tuning/pids/centripetal
-            .centripetalScaling(0.0005);
 
     // ============================================================
     //                    MECANUM DRIVETRAIN
@@ -182,39 +130,21 @@ public class Constants {
     //  Artemis exists — don't rebuild it, tune it.
     // ============================================================
 
-    public static MecanumConstants mecanumConstants = new MecanumConstants()
-            /** ⚙ PHASE 3 — Automatic → Forward Velocity (inches/sec at full power) */
-            // https://pedropathing.com/docs/pathing/tuning/automatic#forward-velocity-tuner
-            .xVelocity(72.69)
-            /** ⚙ PHASE 4 — Automatic → Lateral Velocity. Always lower than
-             *  forward: mecanum wheels strafe by scrubbing sideways, which
-             *  wastes most of what the motors are offering. */
-            // https://pedropathing.com/docs/pathing/tuning/automatic#lateral-velocity-tuner
-            .yVelocity(60.12)
-            .maxPower(MAX_DRIVE_POWER)
-            .leftFrontMotorName(LEFT_FRONT_NAME)
-            .leftRearMotorName(LEFT_BACK_NAME)
-            .rightFrontMotorName(RIGHT_FRONT_NAME)
-            .rightRearMotorName(RIGHT_BACK_NAME)
-            .leftFrontMotorDirection(LEFT_FRONT_DIRECTION)
-            .leftRearMotorDirection(LEFT_BACK_DIRECTION)
-            .rightFrontMotorDirection(RIGHT_FRONT_DIRECTION)
-            .rightRearMotorDirection(RIGHT_BACK_DIRECTION);
+    public static MecanumConfig drivetrainConfig = new MecanumConfig(c -> {
+        c.frontLeftName.set(LEFT_FRONT_NAME);
+        c.backLeftName.set(LEFT_BACK_NAME);
+        c.frontRightName.set(RIGHT_FRONT_NAME);
+        c.backRightName.set(RIGHT_BACK_NAME);
 
-    /**
-     * ⚙ TUNE: How the robot decides a path is "done".
-     * tValue (0–1), velocity (in/s), translational (in), heading (rad), timeout (ms), braking strength, search limit, braking start.
-     */
-    public static PathConstraints pathConstraints = new PathConstraints(
-            0.99,   // Follow the path until it's 99% complete...
-            0.1,    // ...AND velocity is under 0.1 in/s
-            0.5,    // ...AND it is within 0.5 inches of the target
-            Math.toRadians(1.0), // ...AND within 1 degree of the target heading.
-            200,    // If we hit 99% but can't reach tolerances, give up after 100ms.
-            1.0,    // Braking strength (default 1)
-            10,     // Bezier search limit (default 10)
-            1.0     // Braking start (default 1)
-    );
+        c.frontLeftDirection.set(LEFT_FRONT_DIRECTION);
+        c.backLeftDirection.set(LEFT_BACK_DIRECTION);
+        c.frontRightDirection.set(RIGHT_FRONT_DIRECTION);
+        c.backRightDirection.set(RIGHT_BACK_DIRECTION);
+
+        c.manualBrakeMode.set(BRAKE_WHEN_DRIVER_LETS_GO);
+        /** Skip motor writes smaller than this. Saves loop time; 0.01 is fine. */
+        c.powerThreshold.set(0.01);
+    });
 
     // ============================================================
     //                    PINPOINT LOCALIZATION
@@ -228,28 +158,73 @@ public class Constants {
     //  │                                                                   │
     //  │  1. PUSH    — shove the robot forward 12". Does telemetry say     │
     //  │               it moved 12"?                                       │
-    //  │  2. ROTATE  — turn it 90° by hand. Heading change ≈ π/2 (1.57)?   │
-    //  │  3. STRAFE  — push it sideways. Do X and Y both change the way    │
-    //  │               you'd expect?                                       │
-    //  │  4. SPIN    — spin it in circles. Does heading wrap cleanly at    │
-    //  │               ±π, or does it jump?                                │
+    //  │  2. ROTATE  — turn it 90° by hand. Heading change ≈ 90°?          │
+    //  │  3. STRAFE  — push it LEFT. Does Y go UP?                         │
+    //  │  4. SPIN    — spin it in circles. Does it come back to where      │
+    //  │               it started, or wander off?                          │
     //  │                                                                   │
     //  │  Any test fails → fix it HERE, in the direction/offset settings.  │
-    //  │  Tuning PIDs on top of bad localization is tuning against noise.  │
+    //  │  Tuning Foresight on top of bad localization is tuning noise.     │
     //  └───────────────────────────────────────────────────────────────────┘
 
-    public static PinpointConstants localizerConstants = new PinpointConstants()
-            .hardwareMapName(PINPOINT_NAME)
-            /** ⚙ TUNE: pod offsets from robot CENTER, in inches. Measure, don't guess. */
-            .forwardPodY(3)
-            .strafePodX(-9)
-            .distanceUnit(DistanceUnit.INCH)
-            .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD)
-            /** ⚙ TUNE: run Localization Test — pushing forward must INCREASE X.
-             *  If it decreases, flip the direction here, not the wiring. */
-            // https://pedropathing.com/docs/pathing/tuning/localization/pinpoint#encoder-directions
-            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED)
-            .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+    public static PinpointConfig localizerConfig = new PinpointConfig(c -> {
+        c.name.set(PINPOINT_NAME);
+        c.podType.set(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD);
+
+        /** ⚙ TUNE: Pinpoint Tuner measures these. xPodOffset is how far LEFT of
+         *  centre the forward pod sits; yPodOffset is how far FORWARD the strafe
+         *  pod sits. (Pedro 2 called these forwardPodY and strafePodX.) */
+        c.xPodOffset.set(3.0);
+        c.yPodOffset.set(-9.0);
+        c.offsetUnits.set(DistanceUnit.INCH);
+        c.globalDistanceUnit.set(DistanceUnit.INCH);
+
+        /** ⚙ TUNE: pushing forward must INCREASE X; pushing left must INCREASE Y.
+         *  Wrong? Flip it here, not the wiring. */
+        c.xPodDirection.set(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+        c.yPodDirection.set(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+    });
+
+    // ============================================================
+    //                    FORESIGHT (path following)
+    // ============================================================
+
+    public static ForesightConfig foresightConfig = new ForesightConfig(c -> {
+        /** Measured on our robot under Pedro 2 (xVelocity / yVelocity and the
+         *  zero-power accelerations). Same physics, so a fair starting point —
+         *  the Foresight Tuner will measure them again. */
+        c.maxAchievableForwardVelocity.set(72.69);
+        c.maxAchievableStrafeVelocity.set(60.12);
+        c.naturalForwardDeceleration.set(55.58);
+        c.naturalStrafeDeceleration.set(57.45);
+
+        /** ⚙ TUNE — NOT OUR ROBOT'S NUMBERS. Everything from here to the end
+         *  constraints is SolversLib's example robot, there only so the code
+         *  runs. The robot will drive on them, badly. Run the Foresight Tuner
+         *  and paste its output over this block before trusting a path. */
+        c.forwardTranslational.set(Controller.piecewise(Controller.proportional(0.1))
+                .put(2.5, Controller.proportional(0.3)));
+        c.strafeTranslational.set(Controller.piecewise(Controller.proportional(0.1))
+                .put(2.5, Controller.proportional(0.3)));
+
+        c.coast.set(Controller.proportionalFeedforward(0.010978350889324107));
+        c.brake.set(Controller.proportionalFeedforward(0.008731598255925491));
+
+        c.headingFeedback.set(Controller.proportional(5.258721785960744));
+        c.headingBrakeCoefficients.set(Vector2D.cartesian(0.05642143125655298, 0.0063829525363003695));
+
+        c.linearBrakeCoefficients.set(Matrix.diag(0.10605894992901523, 0.08719146175596092));
+        c.quadraticBrakeCoefficients.set(Matrix.diag(0.0014663966976606565, 0.0013837064502458813));
+
+        /** ⚙ TUNE: how a path decides it's "done". Carried over from our Pedro 2
+         *  PathConstraints — the tuner doesn't touch these, so don't lose them
+         *  when you paste. */
+        c.parametricTConstraint.set(0.01);             // follow until 99% complete...
+        c.velocityConstraint.set(0.1);                 // ...AND slower than 0.1 in/s
+        c.translationalConstraint.set(0.5);            // ...AND within 0.5"
+        c.headingConstraint.set(Math.toRadians(1.0));  // ...AND within 1°
+        c.timeoutConstraint.set(200.0);                // can't settle? give up after 200ms
+    });
 
     // ============================================================
     //                    VISION / LIMELIGHT
@@ -308,10 +283,10 @@ public class Constants {
     // ============================================================
 
     public static Follower createFollower(HardwareMap hardwareMap) {
-        return new FollowerBuilder(followerConstants, hardwareMap)
-                .pathConstraints(pathConstraints)
-                .mecanumDrivetrain(mecanumConstants)
-                .pinpointLocalizer(localizerConstants)
-                .build();
+        return new Follower(
+                new PinpointLocalizer(hardwareMap, localizerConfig),
+                new Mecanum(hardwareMap, drivetrainConfig),
+                new Foresight(foresightConfig)
+        );
     }
 }

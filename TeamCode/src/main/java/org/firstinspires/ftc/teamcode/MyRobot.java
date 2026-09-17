@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.pedropathing.geometry.Pose;
+import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -147,11 +147,10 @@ public class MyRobot extends Robot {
                 .whenPressed(new DriveTurnBy(this, 180, true, 3));
 
         // DPAD UP — panic button. Drops any path and hands the wheels back.
+        // Requiring `drive` is the trick: it interrupts whatever command owns
+        // the wheels, and the Drive default command picks them straight back up.
         new GamepadButton(player1, GamepadKeys.Button.DPAD_UP)
-                .whenPressed(new InstantCommand(() -> {
-                    drive.follower.breakFollowing();
-                    drive.follower.startTeleopDrive();
-                }));
+                .whenPressed(new InstantCommand(() -> drive.stop(), drive));
 
         // Right bumper is slow mode — read directly in Drive.execute(), not bound here.
 

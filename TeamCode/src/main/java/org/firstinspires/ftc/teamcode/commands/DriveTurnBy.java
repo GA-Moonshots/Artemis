@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands;
 
 import org.firstinspires.ftc.teamcode.MyRobot;
+import org.firstinspires.ftc.teamcode.utils.Tunables;
 
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -10,15 +11,11 @@ import org.firstinspires.ftc.teamcode.MyRobot;
  * ║  For "face THAT direction" regardless of current heading, use DriveTurnTo.║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  *
- * SolversLib ships a TurnCommand that does the same rotation. We wrap it
- * instead of using it directly for one reason: theirs is
- *
- *     isFinished() { return !follower.isBusy(); }
- *
- * with no timeout and no end(). Pin the robot against a wall and the follower
- * stays busy forever — that command never finishes, and everything queued
- * behind it never runs. Ours inherits DriveAbstract's patience timer and
- * cleanup, so a stuck turn gives up and hands the wheels back.
+ * SolversLib ships a TurnCommand that does the same rotation. We don't use it
+ * for one reason: it has no timeout and no end(). Pin the robot against a wall
+ * and it never gets within tolerance — that command never finishes, and
+ * everything queued behind it never runs. Ours inherits DriveAbstract's
+ * patience timer and cleanup, so a stuck turn gives up and hands the wheels back.
  *
  * Degrees in, radians handled internally. Pedro thinks in radians; humans
  * don't.
@@ -27,6 +24,7 @@ public class DriveTurnBy extends DriveAbstract {
 
     private final double degrees;
     private final boolean turnLeft;
+    private double targetRadians;
 
     /**
      * @param degrees how far to rotate, always positive — direction is the next argument
@@ -46,13 +44,15 @@ public class DriveTurnBy extends DriveAbstract {
     @Override
     public void initialize() {
         patience.start();
-        follower.turn(Math.toRadians(degrees), turnLeft);
+        double change = Math.toRadians(turnLeft ? degrees : -degrees);
+        targetRadians = drive.getPose().heading() + change;
+        drive.turnTo(targetRadians);
         robot.sensors.addTelemetry("TurnBy", "%.0f° %s", degrees, turnLeft ? "left" : "right");
     }
 
     @Override
     public boolean isFinished() {
-        return !follower.isBusy() || patience.done();
+        return drive.isFacing(targetRadians, Tunables.HEADING_TOLERANCE_DEG) || patience.done();
     }
 
     @Override

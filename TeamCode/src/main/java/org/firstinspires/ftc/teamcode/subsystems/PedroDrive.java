@@ -4,17 +4,18 @@ import com.bylazar.field.FieldManager;
 import com.bylazar.field.PanelsField;
 import com.bylazar.field.Style;
 import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.Pose;
-import com.pedropathing.math.Vector;
-import com.pedropathing.util.PoseHistory;
+import com.pedropathing.follower.ManualDrive;
+import com.pedropathing.math.Pose;
+import com.pedropathing.utils.Angle;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 
 import org.firstinspires.ftc.teamcode.MyRobot;
 import org.firstinspires.ftc.teamcode.utils.Constants;
 import org.firstinspires.ftc.teamcode.utils.Tunables;
+
+import java.util.ArrayDeque;
 
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -39,10 +40,15 @@ public class PedroDrive extends SubsystemBase {
 
     private final MyRobot robot;
 
-    /** Pedro's follower: does localization AND path following. */
+    /**
+     * Pedro's follower: localization, path following, AND the motors. Pedro 3
+     * owns the wheels outright — it remembers the last power it sent each one
+     * and skips writes that haven't changed. Set a drive motor's power behind
+     * its back and that memory goes stale: the robot ignores the next command
+     * that happens to match. So nothing in this file touches a motor directly.
+     */
     public final Follower follower;
 
-    private final DcMotorEx leftFront, leftBack, rightFront, rightBack;
     private final IMU imu;
 
     // ============================================================
@@ -93,6 +99,11 @@ public class PedroDrive extends SubsystemBase {
     /** Where the active command is trying to go. Null when nothing is driving. */
     private Pose targetPose = null;
 
+    /** Where we've been. Pedro 2 kept this for us; Pedro 3 doesn't, so we do. */
+    private static final int BREADCRUMB_LIMIT = 200;
+    private static final double BREADCRUMB_SPACING_INCHES = 1.0;
+    private final ArrayDeque<Pose> breadcrumbs = new ArrayDeque<>();
+
     // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
@@ -106,22 +117,6 @@ public class PedroDrive extends SubsystemBase {
     public PedroDrive(MyRobot robot, Pose startPose) {
         this.robot = robot;
 
-        // ============ Motors ============
-        leftFront  = robot.hardwareMap.get(DcMotorEx.class, Constants.LEFT_FRONT_NAME);
-        leftBack   = robot.hardwareMap.get(DcMotorEx.class, Constants.LEFT_BACK_NAME);
-        rightFront = robot.hardwareMap.get(DcMotorEx.class, Constants.RIGHT_FRONT_NAME);
-        rightBack  = robot.hardwareMap.get(DcMotorEx.class, Constants.RIGHT_BACK_NAME);
-
-        leftFront.setDirection(Constants.LEFT_FRONT_DIRECTION);
-        leftBack.setDirection(Constants.LEFT_BACK_DIRECTION);
-        rightFront.setDirection(Constants.RIGHT_FRONT_DIRECTION);
-        rightBack.setDirection(Constants.RIGHT_BACK_DIRECTION);
-
-        leftFront.setZeroPowerBehavior(Constants.DRIVE_ZERO_POWER_BEHAVIOR);
-        leftBack.setZeroPowerBehavior(Constants.DRIVE_ZERO_POWER_BEHAVIOR);
-        rightFront.setZeroPowerBehavior(Constants.DRIVE_ZERO_POWER_BEHAVIOR);
-        rightBack.setZeroPowerBehavior(Constants.DRIVE_ZERO_POWER_BEHAVIOR);
-
         // ============ IMU ============
         imu = robot.hardwareMap.get(IMU.class, Constants.IMU_NAME);
         imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
@@ -130,8 +125,9 @@ public class PedroDrive extends SubsystemBase {
         )));
 
         // ============ Pedro ============
+        // Motors, directions, and brake mode all come from Constants.drivetrainConfig.
         follower = Constants.createFollower(robot.hardwareMap);
-        follower.setStartingPose(startPose);
+        follower.setPose(startPose);
 
         // ============ Dashboard ============
         try {
@@ -155,6 +151,7 @@ public class PedroDrive extends SubsystemBase {
         // Not twice (robot thinks it moved twice as far). Once.
         follower.update();
 
+        dropBreadcrumb();
         draw();
         addTelemetry();
     }
@@ -171,21 +168,24 @@ public class PedroDrive extends SubsystemBase {
      * @param turn    +1 is counter-clockwise
      */
     public void drive(double forward, double strafe, double turn) {
-        // Pedro's flag is robotCentric, which is the opposite of ours. Hence the !.
-        follower.setTeleOpDrive(
-                forward * driveSpeed,
-                strafe * driveSpeed,
-                turn * driveSpeed,
-                !fieldCentric
-        );
+        forward *= driveSpeed;
+        strafe  *= driveSpeed;
+        turn    *= driveSpeed;
+
+        if (fieldCentric) {
+            // Rotates the stick by our heading, so "up" means "away from the driver".
+            follower.manual(ManualDrive.fieldCentric(forward, strafe, turn, getPose().heading()));
+        } else {
+            follower.manual(forward, strafe, turn);
+        }
     }
 
-    /** Everything stops. Right now. */
+    /**
+     * Everything stops. Right now. Also drops any path or hold — the follower
+     * goes idle until someone gives it a new job.
+     */
     public void stop() {
-        leftFront.setPower(0);
-        leftBack.setPower(0);
-        rightFront.setPower(0);
-        rightBack.setPower(0);
+        follower.stop();
     }
 
     // ============================================================
@@ -193,7 +193,7 @@ public class PedroDrive extends SubsystemBase {
     // ============================================================
 
     public Pose getPose() {
-        return follower.getPose();
+        return follower.pose();
     }
 
     /** Teleport the robot's *belief* about where it is (e.g. after an AprilTag fix). */
@@ -208,17 +208,45 @@ public class PedroDrive extends SubsystemBase {
      * degrees it will not complain — it will just drive somewhere surprising.
      */
     public double getNormalizedHeading() {
-        double angle = follower.getPose().getHeading();
-        while (angle > Math.PI)   angle -= 2 * Math.PI;
-        while (angle <= -Math.PI) angle += 2 * Math.PI;
-        return angle;
+        // Pedro 3 stores headings as 0..2π, so 350° and -10° are the same pose
+        // but not the same number. Humans and the Limelight want the signed one.
+        return Angle.normalizeSigned(getPose().heading());
+    }
+
+    /**
+     * Turn in place to face {@code radians}. Pedro 3 has no turn(): it holds
+     * where we're standing with a new heading, and that IS a turn.
+     */
+    public void turnTo(double radians) {
+        follower.hold(getPose().withHeading(radians));
+        follower.algorithm().reset();   // hold() doesn't clear the last move's controllers; this does
+    }
+
+    /**
+     * Facing within {@code degrees} of {@code radians}, and not still swinging
+     * through it? Don't use follower.isBusy() for turns — while holding, it
+     * goes false after Foresight's timeoutConstraint whether we've arrived or not.
+     */
+    public boolean isFacing(double radians, double degrees) {
+        double errorDeg = Math.toDegrees(Angle.error(getPose().heading(), radians));
+        double spinDegPerSec = Math.toDegrees(follower.velocity().omega);
+        return Math.abs(errorDeg) < degrees && Math.abs(spinDegPerSec) < degrees * 10;
+    }
+
+    /**
+     * Within {@code inches} of the target on both X and Y? Heading is ignored —
+     * the path's heading interpolation takes care of that.
+     */
+    public boolean atPose(Pose target, double inches) {
+        Pose current = getPose();
+        return Math.abs(target.x() - current.x()) < inches
+                && Math.abs(target.y() - current.y()) < inches;
     }
 
     /** "Forward is that way now." Resets heading, keeps position. */
     public void resetHeading() {
         imu.resetYaw();
-        Pose current = getPose();
-        setPose(new Pose(current.getX(), current.getY(), 0));
+        setPose(getPose().withHeading(0));
     }
 
     /** Straight-line inches to our alliance's scoring target. */
@@ -226,7 +254,7 @@ public class PedroDrive extends SubsystemBase {
         Pose current = getPose();
         double targetX = robot.isRed ? Constants.RED_TARGET_X : Constants.BLUE_TARGET_X;
         double targetY = robot.isRed ? Constants.RED_TARGET_Y : Constants.BLUE_TARGET_Y;
-        return Math.hypot(targetX - current.getX(), targetY - current.getY());
+        return Math.hypot(targetX - current.x(), targetY - current.y());
     }
 
     // ============================================================
@@ -263,7 +291,7 @@ public class PedroDrive extends SubsystemBase {
 
         try {
             if (Tunables.SHOW_FRAME_MARKERS) drawFrameMarkers();
-            if (Tunables.SHOW_BREADCRUMBS)   drawBreadcrumbs(follower.getPoseHistory());
+            if (Tunables.SHOW_BREADCRUMBS)   drawBreadcrumbs();
             if (Tunables.SHOW_TARGET && targetPose != null) drawTarget(targetPose);
             drawRobot(getPose());
             panels.update();
@@ -312,31 +340,38 @@ public class PedroDrive extends SubsystemBase {
 
         Style style = robot.isRed ? RED_ROBOT : BLUE_ROBOT;
         panels.setStyle(style);
-        panels.moveCursor(pose.getX(), pose.getY());
+        panels.moveCursor(pose.x(), pose.y());
         panels.circle(ROBOT_RADIUS);
 
-        Vector heading = pose.getHeadingAsUnitVector();
-        heading.setMagnitude(heading.getMagnitude() * ROBOT_RADIUS);
+        double noseX = Math.cos(pose.heading()) * ROBOT_RADIUS;
+        double noseY = Math.sin(pose.heading()) * ROBOT_RADIUS;
 
         panels.setStyle(style);
-        panels.moveCursor(pose.getX() + heading.getXComponent() / 2,
-                          pose.getY() + heading.getYComponent() / 2);
-        panels.line(pose.getX() + heading.getXComponent(),
-                    pose.getY() + heading.getYComponent());
+        panels.moveCursor(pose.x() + noseX / 2, pose.y() + noseY / 2);
+        panels.line(pose.x() + noseX, pose.y() + noseY);
+    }
+
+    /** Remember where we are, if we've moved far enough to be worth remembering. */
+    private void dropBreadcrumb() {
+        Pose here = getPose();
+        if (!isSane(here)) return;
+        Pose last = breadcrumbs.peekLast();
+        if (last != null && last.distance(here) < BREADCRUMB_SPACING_INCHES) return;
+
+        breadcrumbs.addLast(here);
+        if (breadcrumbs.size() > BREADCRUMB_LIMIT) breadcrumbs.removeFirst();
     }
 
     /** Where we've been this match. */
-    private void drawBreadcrumbs(PoseHistory history) {
-        if (history == null) return;
-        double[] xs = history.getXPositionsArray();
-        double[] ys = history.getYPositionsArray();
-        if (xs == null || ys == null) return;
-
+    private void drawBreadcrumbs() {
         panels.setStyle(BREADCRUMBS);
-        int size = Math.min(xs.length, ys.length);
-        for (int i = 0; i < size - 1; i++) {
-            panels.moveCursor(xs[i], ys[i]);
-            panels.line(xs[i + 1], ys[i + 1]);
+        Pose previous = null;
+        for (Pose crumb : breadcrumbs) {
+            if (previous != null) {
+                panels.moveCursor(previous.x(), previous.y());
+                panels.line(crumb.x(), crumb.y());
+            }
+            previous = crumb;
         }
     }
 
@@ -344,14 +379,14 @@ public class PedroDrive extends SubsystemBase {
     private void drawTarget(Pose target) {
         if (!isSane(target)) return;
         panels.setStyle(TARGET);
-        panels.moveCursor(target.getX(), target.getY());
+        panels.moveCursor(target.x(), target.y());
         panels.circle(ROBOT_RADIUS / 2);
 
         Pose current = getPose();
         if (isSane(current)) {
             panels.setStyle(TARGET);
-            panels.moveCursor(current.getX(), current.getY());
-            panels.line(target.getX(), target.getY());
+            panels.moveCursor(current.x(), current.y());
+            panels.line(target.x(), target.y());
         }
     }
 
@@ -365,7 +400,7 @@ public class PedroDrive extends SubsystemBase {
 
             Pose current = getPose();
             if (isSane(current)) {
-                panels.moveCursor(current.getX(), current.getY());
+                panels.moveCursor(current.x(), current.y());
                 panels.line(tagX, tagY);
             }
         } catch (Exception e) {
@@ -395,9 +430,9 @@ public class PedroDrive extends SubsystemBase {
     /** NaN poses appear when localization is confused; drawing one kills the canvas. */
     private boolean isSane(Pose p) {
         return p != null
-                && !Double.isNaN(p.getX())
-                && !Double.isNaN(p.getY())
-                && !Double.isNaN(p.getHeading());
+                && !Double.isNaN(p.x())
+                && !Double.isNaN(p.y())
+                && !Double.isNaN(p.heading());
     }
 
     // ============================================================
@@ -409,7 +444,8 @@ public class PedroDrive extends SubsystemBase {
         robot.sensors.addTelemetry("═══ Drive ═══", "");
         robot.sensors.addTelemetry("Mode", fieldCentric ? "Field-Centric" : "Robot-Centric");
         robot.sensors.addTelemetry("Speed", "%.0f%%", driveSpeed * 100);
-        robot.sensors.addTelemetry("Position", "X:%.1f\" Y:%.1f\"", pose.getX(), pose.getY());
-        robot.sensors.addTelemetry("Heading", "%.1f°", Math.toDegrees(pose.getHeading()));
+        robot.sensors.addTelemetry("Position", "X:%.1f\" Y:%.1f\"", pose.x(), pose.y());
+        robot.sensors.addTelemetry("Heading", "%.1f°", Math.toDegrees(getNormalizedHeading()));
+        robot.sensors.addTelemetry("Follower", follower.mode().toString());
     }
 }

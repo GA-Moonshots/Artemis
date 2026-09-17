@@ -1,7 +1,8 @@
 # When the robot won't localize
 
-Symptoms that all mean the same thing: Panels coordinates frozen while the robot drives, the
-Forward Zero Power tuner never starting its slowdown, autonomous driving as if it never moved.
+Symptoms that all mean the same thing: Panels coordinates frozen while the robot drives, an
+AutoTune procedure that never seems to notice the robot moving, autonomous driving as if it never
+moved.
 
 All of those say **position data isn't arriving**. Work down this list in order — each step rules
 out a whole layer, so don't skip ahead.
@@ -31,7 +32,7 @@ In [`utils/Constants.java`](../TeamCode/src/main/java/org/firstinspires/ftc/team
 
 - **`PINPOINT_NAME`** must match the Driver Station config exactly, including case. Pedro defaults
   this internally to `"pinpoint"`; we set it explicitly so a mismatch is visible instead of silent.
-- **`encoderResolution`** and the **pod offsets** — these match
+- **`podType`** and the **pod offsets** in `localizerConfig` — these match
   [Ganymede](https://github.com/GA-Moonshots/Ganymede) exactly, and Ganymede localized fine all
   last season on this hardware. So treat them as known-good until something else is ruled out.
   Compare against Ganymede whenever you're unsure what a working value looks like — same team,
@@ -39,14 +40,14 @@ In [`utils/Constants.java`](../TeamCode/src/main/java/org/firstinspires/ftc/team
 
 ## 3. Do the directions and frame agree?
 
-`Tuning → Localization → Localization Test`, then the four push tests in
-[coordinates.md](coordinates.md): push forward 12" and confirm the reading moves 12" the right way.
-If it moves the wrong way, flip `forwardEncoderDirection` / `strafeEncoderDirection` in `Constants`
-— not the wiring.
+Run the hand tests in [tuning.md](tuning.md): push forward 12" and confirm the reading moves 12"
+the right way. If it moves the wrong way, flip `xPodDirection` / `yPodDirection` in `Constants` —
+not the wiring. AutoTune's **Tests → localization** check does the same thing from a browser.
 
 ## 4. Version skew
 
-Ganymede ran SDK 11.1. We're on 11.2.1 with Pedro Pathing 2.0.6. If steps 1-3 all pass — sensor
+Ganymede ran SDK 11.1 with Pedro 2. We're on SDK 12.0 with Pedro Pathing 3.0.0, a full rewrite of
+the follower and the Pinpoint localizer. If steps 1-3 all pass — sensor
 READY, ticks moving, config matching a season that worked — then what changed is the SDK
 underneath Pedro, not anything in this repo. Note it in [issue-log.md](issue-log.md) before you
 start editing code.

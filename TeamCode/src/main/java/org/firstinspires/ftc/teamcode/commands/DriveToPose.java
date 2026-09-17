@@ -1,8 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands;
 
-import com.pedropathing.geometry.BezierLine;
-import com.pedropathing.geometry.Pose;
-import com.pedropathing.paths.PathBuilder;
+import com.pedropathing.api.Paths;
+import com.pedropathing.math.Pose;
 
 import org.firstinspires.ftc.teamcode.MyRobot;
 import org.firstinspires.ftc.teamcode.utils.Tunables;
@@ -35,26 +34,23 @@ public class DriveToPose extends DriveAbstract {
         patience.start();
         arrived = false;
 
-        PathBuilder path = new PathBuilder(follower)
-                .addPath(new BezierLine(drive.getPose(), targetPose))
-                .setConstantHeadingInterpolation(targetPose.getHeading());
-        follower.followPath(path.build());
+        // A path with no heading rule throws the moment it's followed. constant() is the rule.
+        follower.follow(Paths.line(drive.getPose(), targetPose).constant(targetPose));
         drive.setTargetPose(targetPose);   // so the dashboard shows intent vs. reality
 
         robot.sensors.addTelemetry("DriveToPose", "→ (%.1f, %.1f)",
-                targetPose.getX(), targetPose.getY());
+                targetPose.x(), targetPose.y());
     }
 
     @Override
     public void execute() {
-        if (follower.atPose(targetPose, Tunables.POSE_TOLERANCE, Tunables.POSE_TOLERANCE)) {
+        if (drive.atPose(targetPose, Tunables.POSE_TOLERANCE)) {
             arrived = true;
         }
 
         Pose current = drive.getPose();
         robot.sensors.addTelemetry("Distance Remaining", "%.1f\"",
-                Math.hypot(targetPose.getX() - current.getX(),
-                           targetPose.getY() - current.getY()));
+                current.distance(targetPose));
     }
 
     @Override

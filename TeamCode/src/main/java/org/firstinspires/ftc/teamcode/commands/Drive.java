@@ -37,14 +37,6 @@ public class Drive extends CommandBase {
     }
 
     @Override
-    public void initialize() {
-        // Whoever ran last may have left the follower chasing a path. Take the
-        // wheels back before the driver notices they're fighting a ghost.
-        drive.follower.breakFollowing();
-        drive.follower.startTeleopDrive();
-    }
-
-    @Override
     public void execute() {
         // Hold right bumper for precision mode.
         double easyDoesIt = player1.getButton(GamepadKeys.Button.RIGHT_BUMPER)
@@ -63,6 +55,8 @@ public class Drive extends CommandBase {
             strafe = -strafe;
         }
 
+        // This also takes the wheels back from any path or hold the last command
+        // left running — the driver never fights a ghost.
         drive.drive(forward * easyDoesIt, strafe * easyDoesIt, turn * easyDoesIt);
 
         robot.sensors.addTelemetry("Speed Mode", easyDoesIt < 1.0 ? "SLOW" : "NORMAL");

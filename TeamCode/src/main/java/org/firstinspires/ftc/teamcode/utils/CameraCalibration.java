@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.utils;
 
-import com.pedropathing.geometry.Pose;
+import com.pedropathing.math.Pose;
+import com.pedropathing.utils.Angle;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 
@@ -84,17 +85,19 @@ public class CameraCalibration extends CommandOpMode {
             return;
         }
 
-        double dx = seen.getX() - KNOWN_X;
-        double dy = seen.getY() - KNOWN_Y;
-        double dh = Math.toDegrees(seen.getHeading()) - KNOWN_HEADING_DEG;
+        double dx = seen.x() - KNOWN_X;
+        double dy = seen.y() - KNOWN_Y;
+        // Pedro stores 0..360, humans type -180..180. Compare the difference, wrapped.
+        double dh = Math.toDegrees(Angle.normalizeSigned(
+                seen.heading() - Math.toRadians(KNOWN_HEADING_DEG)));
 
         robot.sensors.addTelemetry("Camera says", "X:%.1f Y:%.1f H:%.0f°",
-                seen.getX(), seen.getY(), Math.toDegrees(seen.getHeading()));
+                seen.x(), seen.y(), Math.toDegrees(Angle.normalizeSigned(seen.heading())));
         robot.sensors.addTelemetry("ERROR", "dX:%+.1f\" dY:%+.1f\" dH:%+.0f°", dx, dy, dh);
         robot.sensors.addTelemetry("Distance off", "%.1f\"", Math.hypot(dx, dy));
 
         // A cheap hint that's easy to miss by eye.
-        if (Math.abs(dx - (KNOWN_Y - seen.getY())) < 2.0 && Math.hypot(dx, dy) > 4.0) {
+        if (Math.abs(dx - (KNOWN_Y - seen.y())) < 2.0 && Math.hypot(dx, dy) > 4.0) {
             robot.sensors.addTelemetry("HINT", "looks like X/Y are swapped — see FieldMap.ftcToPedro");
         }
     }

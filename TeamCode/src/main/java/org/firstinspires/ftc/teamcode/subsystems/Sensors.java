@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
-import com.pedropathing.geometry.Pose;
+import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -159,10 +159,16 @@ public class Sensors extends SubsystemBase {
             // Push our field map so tag coordinates live in git rather than
             // only on the camera. Best effort — a camera with a good built-in
             // map still works, so we don't fail the robot over this.
-            try {
-                limelight.uploadFieldmap(FieldMap.buildLimelightFieldMap(), null);
-            } catch (Exception ignored) {
-                // Older firmware, or the map was rejected. Carry on.
+            //
+            // Only when we'll actually localize off it. BIOBUZZ tags move, so
+            // the SDK's positions are where a tag STARTS, not where it is —
+            // see the note on Tunables.VISION_CORRECTIONS_ENABLED.
+            if (Tunables.VISION_CORRECTIONS_ENABLED) {
+                try {
+                    limelight.uploadFieldmap(FieldMap.buildLimelightFieldMap(), null);
+                } catch (Exception ignored) {
+                    // Older firmware, or the map was rejected. Carry on.
+                }
             }
         } catch (Exception e) {
             limelight = null;
@@ -229,8 +235,8 @@ public class Sensors extends SubsystemBase {
         Pose visionPose = FieldMap.limelightToPedro(botpose);
 
         // A pose off the field is a bad read, full stop.
-        if (visionPose.getX() < -12 || visionPose.getX() > 156
-                || visionPose.getY() < -12 || visionPose.getY() > 156) {
+        if (visionPose.x() < -12 || visionPose.x() > 156
+                || visionPose.y() < -12 || visionPose.y() > 156) {
             rejectVision("off-field reading");
             return;
         }
@@ -239,8 +245,7 @@ public class Sensors extends SubsystemBase {
         // disagreement is drift worth fixing. A large one is far more likely a
         // misread than the robot having teleported.
         Pose current = robot.drive.getPose();
-        double jump = Math.hypot(visionPose.getX() - current.getX(),
-                                 visionPose.getY() - current.getY());
+        double jump = visionPose.distance(current);
         if (jump > Constants.VISION_MAX_JUMP_INCHES) {
             rejectVision(String.format("implausible jump (%.0f\")", jump));
             return;

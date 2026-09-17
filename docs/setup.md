@@ -26,8 +26,10 @@ command that resolves it.
    why. Clicked it by accident? `./scripts/check-structure.sh` names exactly what to put back.
 
 Deploy with the **Run** button, same as always. Pick your OpMode on the Driver Station:
-*Drivey McDriverson* (teleop), *Auto McAutty* (autonomous), *Tuning* (see [tuning.md](tuning.md)),
-*Camera Calibration* (see [coordinates.md](coordinates.md)).
+*Drivey McDriverson* (teleop), *Auto McAutty* (autonomous), *Camera Calibration* (see
+[coordinates.md](coordinates.md)), *Pinpoint Doctor* (see [diagnostics.md](diagnostics.md)).
+Drivetrain tuning isn't on the Driver Station any more: it runs in a browser
+([tuning.md](tuning.md)).
 
 ## The scripts
 

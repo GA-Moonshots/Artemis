@@ -6,6 +6,44 @@ Format: `## YYYY-MM-DD — title`, then what broke, why, and the fix.
 
 ---
 
+## 2026-09-16 — BIOBUZZ ready: SDK 12.0, SolversLib 0.3.6, Pedro 3, Panels 1.0.13
+
+Our PR (SolversLib #40) was folded into SolversLib's own "Migrate to Pedro 3.0.0" commit and
+shipped as **0.3.6**. Moved everything at once, because 0.3.6 only works with Pedro 3 and Pedro 3
+couldn't be a version bump anyway:
+
+- **SDK 12.0 merged from FIRST.** Clean merge; only `build.dependencies.gradle`, `README.md`, and
+  AprilTag samples changed.
+- **Pedro moved to Maven Central** as `com.pedropathing:revhub:3.0.0`. The old
+  `maven.pedropathing.com` repo is gone from our build.
+- **Pedro 3 renamed nearly everything.** `geometry.Pose` → `math.Pose` with `x()` instead of
+  `getX()`. `FollowerBuilder` → `new Follower(localizer, drivetrain, new Foresight(config))`.
+  `PathBuilder` → `Paths.line(a, b).constant(heading)`. `followPath` → `follow`.
+  `setTeleOpDrive` → `manual(...)`. `breakFollowing` → `stop`. `turn()` / `turnTo()` are gone:
+  a turn is now `hold(pose.withHeading(h))`. Headings are stored 0..2π, so anything shown to a human
+  goes through `Angle.normalizeSigned` first.
+- **Don't use `isBusy()` to end a turn.** While holding, it goes false after Foresight's
+  `timeoutConstraint` whether or not the robot arrived. `PedroDrive.isFacing()` checks the actual
+  heading instead.
+- **Pedro 3 owns the drive motors.** `Mecanum` caches the last power per wheel and skips writes
+  that match it, so `PedroDrive` no longer grabs the motors to zero them. That would leave the cache
+  stale, and the next matching command would be silently dropped. `stop()` is `follower.stop()`.
+- **Tuning is AutoTune now:** a web page at `192.168.43.1:10158`, backed by
+  `com.pedropathing:tuning`. The old 17-class `Tuning.java` is replaced; see
+  [tuning.md](tuning.md). The Foresight controller values in `Constants` are placeholders until the
+  Foresight Tuner runs on this robot.
+- **Pedro 3 dropped `PoseHistory`,** so `PedroDrive` keeps its own breadcrumb trail.
+
+**BIOBUZZ AprilTags move.** SDK 12.0's release notes: the tags "are not suitable for absolute Field
+Localization." They still ship *with* field positions, so `FieldMap`'s "has a position = landmark"
+filter no longer tells them apart. A moved tag reads as confident as a fixed one and pulls odometry
+toward where it started, inside the 24" jump limit, with no error. So
+`Tunables.VISION_CORRECTIONS_ENABLED` now defaults to **false**, and the tag map is only uploaded
+to the Limelight when it's on. Vision still runs and reports what it *would* have done.
+
+**Not yet verified on hardware:** AutoTune's web UI, the new turn logic, and field-centric feel.
+Run the tuning sequence before trusting any path.
+
 ## 2026-09-08 — Localization dead: Panels frozen, tuner never slows down
 
 Two symptoms, one cause. The Forward Zero Power tuner builds its OWN follower from

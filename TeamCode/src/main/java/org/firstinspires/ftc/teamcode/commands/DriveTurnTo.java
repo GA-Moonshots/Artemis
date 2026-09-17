@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands;
 
 import org.firstinspires.ftc.teamcode.MyRobot;
+import org.firstinspires.ftc.teamcode.utils.Tunables;
 
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -30,14 +31,15 @@ public class DriveTurnTo extends DriveAbstract {
     @Override
     public void initialize() {
         patience.start();
-        follower.turnTo(Math.toRadians(targetDegrees));
+        drive.turnTo(Math.toRadians(targetDegrees));
         robot.sensors.addTelemetry("TurnTo", "%.0f° (from %.0f°)",
                 targetDegrees, Math.toDegrees(drive.getNormalizedHeading()));
     }
 
     @Override
     public boolean isFinished() {
-        return !follower.isBusy() || patience.done();
+        return drive.isFacing(Math.toRadians(targetDegrees), Tunables.HEADING_TOLERANCE_DEG)
+                || patience.done();
     }
 
     @Override

@@ -49,6 +49,9 @@ public class Tunables {
     /** How close (inches) counts as "arrived" for a path command. */
     public static double POSE_TOLERANCE = 0.5;
 
+    /** How close (degrees) counts as "facing it" for a turn command. */
+    public static double HEADING_TOLERANCE_DEG = 1.0;
+
     // ---- Dashboard drawing ----
 
     /** Draw the coordinate frame markers. Leave on until you trust the frame. */
@@ -68,13 +71,17 @@ public class Tunables {
     /**
      * Master switch for pose correction.
      *
-     * Turn this OFF to watch vision without letting it touch the robot: the
-     * dashboard still shows what it would have done, and nothing moves because
-     * of it. That's the right setting for the first few matches on a new
-     * camera mount, and the fastest way to rule vision out when autonomous
-     * misbehaves.
+     * OFF watches vision without letting it touch the robot: the dashboard
+     * still shows what it would have done, and nothing moves because of it.
+     *
+     * OFF BY DEFAULT FOR BIOBUZZ. FIRST's SDK 12.0 notes say this season's
+     * AprilTags move during the match, so they "are not suitable for absolute
+     * field localization." A tag that has moved still looks perfectly
+     * confident — it just drags odometry toward where the tag used to be,
+     * inside the jump limit, with no error anywhere. Turn this on only for a
+     * tag you've proven stays put (CameraCalibration, at a few spots).
      */
-    public static boolean VISION_CORRECTIONS_ENABLED = true;
+    public static boolean VISION_CORRECTIONS_ENABLED = false;
 
     // ============================================================
 

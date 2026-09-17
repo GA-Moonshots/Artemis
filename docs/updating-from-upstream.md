@@ -21,15 +21,25 @@ SolversLib, Pedro Pathing, Panels, and FTC Dashboard are **dependencies, not for
 version numbers in `TeamCode/build.gradle`:
 
 ```gradle
-implementation "org.solverslib:core:0.3.5"
-implementation "org.solverslib:pedroPathing:0.3.5"
-implementation 'com.pedropathing:ftc:2.0.6'
-implementation "com.bylazar:fullpanels:1.0.12"
+implementation "org.solverslib:core:0.3.6"
+implementation "org.solverslib:pedroPathing:0.3.6"
+implementation 'com.pedropathing:revhub:3.0.0'
+implementation 'com.pedropathing:tuning:1.0.0'
+implementation "com.bylazar:fullpanels:1.0.13"
 ```
 
 Change the number, rebuild, done. No merge, no conflict, nothing to resolve. Latest versions:
 [SolversLib releases](https://github.com/FTC-23511/SolversLib/releases) ·
-[Pedro Pathing](https://pedropathing.com).
+[Pedro Pathing on Maven Central](https://central.sonatype.com/namespace/com.pedropathing) ·
+[Panels](https://mymaven.bylazar.com/#/releases/com/bylazar/fullpanels).
+
+**The exception is a major version.** A version bump is only "done" when the API didn't change.
+Pedro 2 → 3 renamed nearly everything and replaced the tuners (see
+[issue-log.md](issue-log.md), 2026-09-16), so it took a real port. Check the release notes before
+bumping a first digit.
+
+SolversLib's `pedroPathing` module is compiled against one Pedro major. Bump them together:
+0.3.5 ↔ Pedro 2, 0.3.6 ↔ Pedro 3.
 
 Bump one at a time and build in between. When something breaks you want to know which one did it.
 

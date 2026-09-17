@@ -29,7 +29,7 @@ grep "com.android.tools.build:gradle" build.gradle              # AGP
 grep -E "compileSdk|minSdkVersion|targetSdkVersion" build.common.gradle
 ```
 
-As of 2026-08-29: **Gradle 9.1.0, AGP 8.13.2, SDK v11.2.1**, compileSdk 34, minSdk 24,
+As of 2026-09-16: **Gradle 9.1.0, AGP 8.13.2, SDK v12.0.0** (BIOBUZZ), compileSdk 34, minSdk 24,
 targetSdk 28, Java 1.8.
 
 > ⚠️ **AGP 8.13.2 needs a recent Android Studio.** Older installs will refuse to sync this project

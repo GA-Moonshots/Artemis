@@ -15,7 +15,7 @@ keeps driving on odometry alone.
 
 ## Tier 2 — Panels
 
-- [x] Live-editable `Tunables` (drive feel, tolerances, drawing toggles). PIDs deliberately left to the `Tuning` OpMode — two places to edit one number is how you lose an afternoon.
+- [x] Live-editable `Tunables` (drive feel, tolerances, drawing toggles). Drivetrain tuning deliberately left to Pedro's AutoTune — two places to edit one number is how you lose an afternoon.
 - [x] Draw target pose + a line from current position — intent vs. reality.
 - [x] Alliance-coloured robot; tag-sighting draw ready for Tier 3.
 - [x] **Frame-of-reference markers** — origin, both axes, centre, far corner. Catches a Panels/Pedro frame mismatch in two seconds without moving the robot. See docs/coordinates.md.
