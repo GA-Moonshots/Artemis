@@ -212,6 +212,15 @@ public class Constants {
                 c.maxAchievableStrafeVelocity.set(58.931081559691414);
                 c.naturalForwardDeceleration.set(67.53830889197948);
                 c.naturalStrafeDeceleration.set(75.77981882324022);
+
+                // ⚠ KEEP THESE WHEN YOU PASTE. AutoTune doesn't generate them, so
+                // pasting its block over this one silently deletes them (it has,
+                // twice). They decide when a path counts as "done".
+                c.parametricTConstraint.set(0.01);             // follow until 99% complete...
+                c.velocityConstraint.set(0.1);                 // ...AND slower than 0.1 in/s
+                c.translationalConstraint.set(0.5);            // ...AND within 0.5"
+                c.headingConstraint.set(Math.toRadians(1.0));  // ...AND within 1°
+                c.timeoutConstraint.set(200.0);                // can't settle? give up after 200ms
             }
     );
 

@@ -22,7 +22,7 @@ in `TeamCode/build.gradle`:
 
 ```gradle
 implementation "org.solverslib:core:0.3.6"
-implementation 'com.pedropathing:revhub:3.0.0'
+implementation 'com.pedropathing:revhub:3.0.1'
 implementation 'com.pedropathing:tuning:1.0.0'
 implementation "com.bylazar:fullpanels:1.0.12"
 ```

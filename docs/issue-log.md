@@ -6,6 +6,17 @@ Format: `## YYYY-MM-DD — title`, then what broke, why, and the fix.
 
 ---
 
+## 2026-09-19 — Path end constraints lost in a paste; Pedro 3.0.1
+
+**Foresight's end constraints were gone.** Pasting AutoTune's `foresightConfig` output replaced the
+whole block, and AutoTune doesn't generate the end constraints, so paths fell back to Pedro's
+defaults for "done". It happened in Artemis and Iapetus both, despite the warning in tuning.md.
+Restored, with a louder comment right where the paste lands.
+
+**Pedro 3.0.1** includes the fix for 3.0.0 dropping the start pose (the Pinpoint resets in the
+localizer's constructor, and a pose set straight afterwards could be ignored, so autonomous
+started at (0,0)). Iapetus had worked around it with a 500 ms wait; bumping is the real fix.
+
 ## 2026-09-19 — Field tab gone, frame still Pedro 2, repo re-forked
 
 **Panels showed no Field tab**, so no robot overlay. `fullpanels` 1.0.13's only change is `field`
