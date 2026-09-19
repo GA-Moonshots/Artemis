@@ -51,7 +51,10 @@ else
 fi
 
 if git remote get-url upstream >/dev/null 2>&1; then
-    if git rev-parse --verify --quiet upstream/master >/dev/null; then
+    if ! git remote get-url upstream | grep -q "FtcRobotController"; then
+        warn "upstream points at $(git remote get-url upstream), not FIRST's SDK."
+        note "git remote set-url upstream https://github.com/FIRST-Tech-Challenge/FtcRobotController.git"
+    elif git rev-parse --verify --quiet upstream/master >/dev/null; then
         ok "upstream configured and fetched"
     else
         warn "upstream configured but never fetched."

@@ -15,6 +15,10 @@ git remote add upstream https://github.com/FIRST-Tech-Challenge/FtcRobotControll
 `doctor.sh` checks your setup and fixes nothing, so it's always safe to run. Each ✗ comes with the
 command that resolves it.
 
+**Not on Moonshots?** Fork `GA-Moonshots/Artemis` on GitHub first and clone *your* fork; the
+`upstream` line is the same for everyone. Then see "Using it on your team" in
+[MOONSHOTS.md](../MOONSHOTS.md).
+
 ## Android Studio
 
 1. Install the version FIRST currently recommends for this season's SDK (the release notes in
