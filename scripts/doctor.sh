@@ -59,7 +59,7 @@ if git remote get-url upstream >/dev/null 2>&1; then
     fi
 else
     warn "No 'upstream' remote — season SDK updates and the structure check need it."
-    note "git remote add upstream https://github.com/FTC-23511/SolversLib-Quickstart.git"
+    note "git remote add upstream https://github.com/FIRST-Tech-Challenge/FtcRobotController.git"
 fi
 
 # ─── Machine-specific config ─────────────────────────────────────

@@ -49,18 +49,17 @@ dependencies {
     implementation project(':FtcRobotController')
     annotationProcessor files('lib/OpModeAnnotationProcessor.jar')
 
-    // SolversLib: Latest Stable Version
+    // SolversLib: the command scheduler and gamepad helpers, nothing else. Its pedroPathing
+    // module is deliberately left out: our drive commands talk to Pedro directly, so a
+    // SolversLib release that lags a Pedro release can't strand us.
+    implementation "org.solverslib:core:0.3.6"
 
-    implementation "org.solverslib:core:0.3.6" // core
-    implementation "org.solverslib:pedroPathing:0.3.6" // pedroPathing
-    //    implementation "org.solverslib:photon:0.3.6" // photon is optional (see docs for more info)
-
-    implementation "com.acmerobotics.dashboard:dashboard:0.5.1" // FTC Dashboard
-
-    // Pedro Pathing
+    // Pedro Pathing 3: core + REV hub hardware, and AutoTune (see utils/Tuning.java)
     implementation 'com.pedropathing:revhub:3.0.0'
-    implementation 'com.pedropathing:tuning:1.0.0' // AutoTune web UI (see utils/Tuning.java)
+    implementation 'com.pedropathing:tuning:1.0.0'
 
-    // Panels Dashboard
-    implementation "com.bylazar:fullpanels:1.0.13"
+    // Panels Dashboard. Held at 1.0.12: 1.0.13's only change is field plugin 1.0.7, which shipped
+    // without its web files, so the Field tab (the robot overlay) vanishes. Check before bumping:
+    // docs/updating-from-upstream.md.
+    implementation "com.bylazar:fullpanels:1.0.12"
 }

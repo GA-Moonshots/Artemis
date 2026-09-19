@@ -76,8 +76,13 @@ If it drives somewhere else, the mismatch is between Pedro and Panels — not yo
 | Source | Its frame | Where we convert |
 |---|---|---|
 | Panels canvas | centre origin, rotated, Y-flipped | `PedroDrive` (preset, pinned in code) |
-| Limelight botpose | metres, centre origin | `FieldMap.limelightToPedro()` |
-| FTC SDK AprilTag | inches, centre origin (±72) | `FieldMap.ftcToPedro()` |
+| Limelight botpose | metres, FTC field frame | `FieldMap.limelightToPedro()` |
+| FTC SDK AprilTag | inches, FTC field frame | `FieldMap.ftcToPedro()` |
+
+**FTC's field frame isn't just Pedro's with the origin moved.** Besides the centre-vs-corner origin, Pedro
+is FTC turned 90° clockwise: `pedroX = ftcY + 72`, `pedroY = 72 − ftcX`, heading − π/2. That's
+Pedro 3's published conversion. Pedro 2-era code (and last season's `FieldMap`) only shifted by 72,
+which puts every tag in the wrong place while looking perfectly reasonable.
 
 The rule: **convert once, at the edge.** A conversion buried in the middle of a command is a bug
 waiting for a Saturday.

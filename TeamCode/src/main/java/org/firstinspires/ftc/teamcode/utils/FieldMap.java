@@ -96,36 +96,47 @@ public class FieldMap {
     /**
      * FTC field coordinates → Pedro's.
      *
-     * FTC puts the origin at the field CENTRE (so coordinates run -72..+72).
-     * Pedro puts it at a CORNER (0..144). The shift is +72 on both axes.
+     * Two differences, and the second one is the expensive one:
+     *   1. Origin. FTC is field CENTRE (-72..+72); Pedro is a CORNER (0..144).
+     *   2. Axes. Pedro's frame is FTC's rotated 90° clockwise: FTC's +Y is
+     *      Pedro's +X, and FTC's +X is Pedro's -Y. Headings rotate with it.
      *
-     * ⚠ VERIFY THIS ON THE FIELD. The +72 shift is certain. Whether the two
-     * frames also disagree about which way X and Y point is NOT something you
-     * can settle by reading code — the Panels Pedro preset applies a 90°
-     * rotation, which hints the axes may not line up. Run CameraCalibration,
-     * park at a known spot, and see whether the reported pose matches. If X
-     * and Y come back swapped or mirrored, fix it HERE, in this one method,
-     * and nowhere else.
+     *      pedroX = ftcY + 72      pedroY = 72 - ftcX      heading - π/2
+     *
+     * Source: Pedro Pathing 3's coordinates reference, which publishes this
+     * exact conversion. It agrees with the Panels Pedro preset's 90° rotation.
+     * (Before Pedro 3 this method only shifted by 72 — see docs/issue-log.md.)
+     *
+     * ⚠ STILL VERIFY IT ON THE FIELD with CameraCalibration: park at a known
+     * spot and see whether the reported pose matches. If it doesn't, fix it
+     * HERE, in these methods, and nowhere else.
      */
     public static double[] ftcToPedro(double ftcX, double ftcY) {
-        return new double[] { ftcX + HALF_FIELD_INCHES, ftcY + HALF_FIELD_INCHES };
+        return new double[] { ftcY + HALF_FIELD_INCHES, HALF_FIELD_INCHES - ftcX };
     }
 
+    /** Exactly undoes ftcToPedro(). */
     public static double[] pedroToFtc(double pedroX, double pedroY) {
-        return new double[] { pedroX - HALF_FIELD_INCHES, pedroY - HALF_FIELD_INCHES };
+        return new double[] { HALF_FIELD_INCHES - pedroY, pedroX - HALF_FIELD_INCHES };
+    }
+
+    /** FTC heading → Pedro heading, both radians. Same 90° as the axes. */
+    public static double ftcHeadingToPedro(double ftcHeadingRad) {
+        return ftcHeadingRad - Math.PI / 2;
     }
 
     /**
      * A Limelight botpose → a Pedro Pose.
      *
      * The Limelight reports metres, degrees, and (with the stock field map)
-     * a centre origin. So: metres→inches, centre→corner, degrees→radians.
+     * the FTC centre-origin frame. So: metres→inches, degrees→radians, then
+     * the FTC→Pedro rotation and shift above.
      */
     public static Pose limelightToPedro(Pose3D botpose) {
         double xIn = metersToInches(botpose.getPosition().x);
         double yIn = metersToInches(botpose.getPosition().y);
         double[] pedro = ftcToPedro(xIn, yIn);
-        double headingRad = Math.toRadians(botpose.getOrientation().getYaw());
+        double headingRad = ftcHeadingToPedro(Math.toRadians(botpose.getOrientation().getYaw()));
         return new Pose(pedro[0], pedro[1], headingRad);
     }
 

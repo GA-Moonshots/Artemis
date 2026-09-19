@@ -6,6 +6,26 @@ Format: `## YYYY-MM-DD — title`, then what broke, why, and the fix.
 
 ---
 
+## 2026-09-19 — Field tab gone, frame still Pedro 2, repo re-forked
+
+**Panels showed no Field tab**, so no robot overlay. `fullpanels` 1.0.13's only change is `field`
+1.0.7, and that `.aar` has no web files (1.0.6 has six). Nothing errors; the tab just isn't there.
+Pinned `fullpanels:1.0.12`. Iapetus found this first.
+
+**`FieldMap.ftcToPedro()` was still the Pedro 2 version**, a +72 shift. Pedro 3 publishes a 90°
+rotation as well. It went unnoticed because vision corrections are off this season, so the only
+symptom was tags drawn in the wrong place. Ported the Iapetus fix.
+
+**Dropped two unused dependencies.** `solverslib:pedroPathing` (never imported; tying SolversLib
+to a Pedro major is the thing we'd rather avoid) and FTC Dashboard (never imported, and a second
+web server next to Panels).
+
+**GitHub fork re-parented.** `GA-Moonshots/Artemis` was a fork of the SolversLib Quickstart. It is
+now a fork of `FIRST-Tech-Challenge/FtcRobotController`, created fresh and fast-forwarded to our
+history. The old repo is `GA-Moonshots/Artemis-quickstart-archive`, archived. GitHub has no
+"change parent" button; this is the only way. `doctor.sh` and `check-structure.sh` were still
+suggesting the Quickstart as `upstream` and are fixed.
+
 ## 2026-09-16 — BIOBUZZ ready: SDK 12.0, SolversLib 0.3.6, Pedro 3, Panels 1.0.13
 
 Our PR (SolversLib #40) was folded into SolversLib's own "Migrate to Pedro 3.0.0" commit and

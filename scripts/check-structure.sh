@@ -79,7 +79,7 @@ fi
 # ─────────────────────────────────────────────────────────────────
 if ! git remote get-url upstream >/dev/null 2>&1; then
     echo "${YELLOW}! No 'upstream' remote — skipping the committed-drift check.${OFF}"
-    echo "${DIM}    Fix: git remote add upstream https://github.com/FTC-23511/SolversLib-Quickstart.git${OFF}"
+    echo "${DIM}    Fix: git remote add upstream https://github.com/FIRST-Tech-Challenge/FtcRobotController.git${OFF}"
     echo
 elif ! git rev-parse --verify --quiet upstream/master >/dev/null; then
     echo "${YELLOW}! Haven't fetched upstream yet — skipping the committed-drift check.${OFF}"
