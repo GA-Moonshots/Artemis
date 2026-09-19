@@ -4,6 +4,7 @@ import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
@@ -13,7 +14,15 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.MyRobot;
 import org.firstinspires.ftc.teamcode.utils.Constants;
 import org.firstinspires.ftc.teamcode.utils.FieldMap;
+import org.firstinspires.ftc.teamcode.utils.TagSighting;
 import org.firstinspires.ftc.teamcode.utils.Tunables;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -57,6 +66,13 @@ public class Sensors extends SubsystemBase {
     // worse than no vision at all.
     private Limelight3A limelight = null;
     private String visionVerdict = "starting up";
+
+    // Tag tracking: the latest sighting of each tag, kept in FIELD coordinates
+    // so it stays true while we drive. Old ones age out (Tunables.TAG_MEMORY_MS).
+    private final Map<Integer, TagSighting> latestById = new LinkedHashMap<>();
+
+    // Fixed-tag localization: off unless a season has tags that stay put.
+    private String localizationVerdict = "off";
     private Pose lastAcceptedPose = null;
     private int acceptedCount = 0;
     private int rejectedCount = 0;
@@ -144,9 +160,84 @@ public class Sensors extends SubsystemBase {
         return limelight != null;
     }
 
-    /** Most recent pose we actually believed, or null. */
+    /** Most recent field pose the camera produced from fixed tags, or null. */
     public Pose lastAcceptedPose() {
         return lastAcceptedPose;
+    }
+
+    // ---- What the camera sees. Every answer is relative to where we are NOW. ----
+
+    /** The latest sighting of this tag id, or null if we haven't seen it lately. */
+    public TagSighting tag(int id) {
+        forgetOldSightings();
+        TagSighting s = latestById.get(id);
+        return s == null ? null : s.seenFrom(robot.drive.getPose());
+    }
+
+    /** The closest single tag we've seen lately, or null. */
+    public TagSighting nearestTag() {
+        forgetOldSightings();
+        Pose here = robot.drive.getPose();
+        TagSighting best = null;
+        for (TagSighting s : latestById.values()) {
+            TagSighting now = s.seenFrom(here);
+            if (best == null || now.range() < best.range()) best = now;
+        }
+        return best;
+    }
+
+    /**
+     * Every OBJECT we've seen lately, one entry each: tags on the same object
+     * (same SDK cluster) are merged; a tag on its own is its own target.
+     * This is what to aim at. See TagSighting.merge() for how exact it is.
+     */
+    public List<TagSighting> targets() {
+        forgetOldSightings();
+        Map<String, List<TagSighting>> byName = new LinkedHashMap<>();
+        for (TagSighting s : latestById.values()) {
+            List<TagSighting> group = byName.get(s.name);
+            if (group == null) {
+                group = new ArrayList<>();
+                byName.put(s.name, group);
+            }
+            group.add(s);
+        }
+
+        Pose here = robot.drive.getPose();
+        List<TagSighting> out = new ArrayList<>();
+        for (List<TagSighting> group : byName.values()) {
+            out.add(TagSighting.merge(group, here));
+        }
+        return out;
+    }
+
+    /** The target with this name (an SDK cluster name, or "tag 31"), or null if it isn't in memory. */
+    public TagSighting target(String name) {
+        for (TagSighting t : targets()) {
+            if (t.name.equals(name)) return t;
+        }
+        return null;
+    }
+
+    /** The closest target we've seen lately, or null. */
+    public TagSighting nearestTarget() {
+        TagSighting best = null;
+        for (TagSighting t : targets()) {
+            if (best == null || t.range() < best.range()) best = t;
+        }
+        return best;
+    }
+
+    private void forgetOldSightings() {
+        Iterator<TagSighting> it = latestById.values().iterator();
+        while (it.hasNext()) {
+            if (it.next().ageMs() > Tunables.TAG_MEMORY_MS) it.remove();
+        }
+    }
+
+    /** Localization needs fixed tags. Seasons without them leave both switches off. */
+    private static boolean localizationOn() {
+        return Tunables.TAG_LOCALIZATION || Tunables.VISION_CORRECTIONS_ENABLED;
     }
 
     private void initLimelight() {
@@ -160,10 +251,9 @@ public class Sensors extends SubsystemBase {
             // only on the camera. Best effort — a camera with a good built-in
             // map still works, so we don't fail the robot over this.
             //
-            // Only when we'll actually localize off it. BIOBUZZ tags move, so
-            // the SDK's positions are where a tag STARTS, not where it is —
-            // see the note on Tunables.VISION_CORRECTIONS_ENABLED.
-            if (Tunables.VISION_CORRECTIONS_ENABLED) {
+            // Only when we'll localize off it, and only if there's something
+            // to send: an empty map would wipe whatever the camera already has.
+            if (localizationOn() && !FieldMap.localizationTags().isEmpty()) {
                 try {
                     limelight.uploadFieldmap(FieldMap.buildLimelightFieldMap(), null);
                 } catch (Exception ignored) {
@@ -180,15 +270,57 @@ public class Sensors extends SubsystemBase {
         if (limelight == null) return;
 
         try {
-            // MegaTag2 needs to know which way we're facing. Pedro already
-            // knows, so hand it over every loop — skip this and MT2 quietly
-            // returns worse numbers rather than an error.
-            limelight.updateRobotOrientation(Math.toDegrees(robot.drive.getNormalizedHeading()));
-            evaluate(limelight.getLatestResult());
+            if (localizationOn()) {
+                // MegaTag2 needs to know which way we're facing. Pedro already
+                // knows, so hand it over every loop — skip this and MT2 quietly
+                // returns worse numbers rather than an error.
+                limelight.updateRobotOrientation(Math.toDegrees(robot.drive.getNormalizedHeading()));
+            }
+            LLResult result = limelight.getLatestResult();
+            trackTags(result);
+            if (localizationOn()) evaluate(result);
         } catch (Exception e) {
             // Camera died mid-match. Stop talking to it; keep driving.
             limelight = null;
             visionVerdict = "camera died — odometry only";
+        }
+    }
+
+    /** Every tag in the frame goes on the field map, stamped with when the camera saw it. */
+    private void trackTags(LLResult result) {
+        if (result == null || !result.isValid()) {
+            visionVerdict = "no tags in view";
+            return;
+        }
+        long staleMs = result.getStaleness();
+        if (staleMs > Constants.VISION_MAX_STALENESS_MS) {
+            visionVerdict = String.format("stale frame (%dms)", staleMs);
+            return;
+        }
+
+        // The frame is staleMs old; so is the tag's position in it.
+        long seenAt = System.nanoTime() - staleMs * 1_000_000L;
+        Pose here = robot.drive.getPose();
+        int placed = 0;
+        int flat = 0;
+        for (LLResultTypes.FiducialResult f : result.getFiducialResults()) {
+            double[] rel = FieldMap.limelightTargetToRobot(f.getTargetPoseRobotSpace());
+            if (rel == null) {
+                flat++;
+                continue;
+            }
+            double[] field = FieldMap.robotToField(here, rel[0], rel[1]);
+            int id = f.getFiducialId();
+            latestById.put(id, new TagSighting(id, FieldMap.targetName(id), 1,
+                    field[0], field[1], rel[2], seenAt, here));
+            placed++;
+        }
+
+        if (placed == 0 && flat > 0) {
+            // Tags detected, but no 3D. Almost always camera setup, not code.
+            visionVerdict = "tags seen, no 3D pose — see docs/vision.md";
+        } else {
+            visionVerdict = placed + (placed == 1 ? " tag" : " tags") + " in view";
         }
     }
 
@@ -256,13 +388,14 @@ public class Sensors extends SubsystemBase {
         }
         lastAcceptedPose = visionPose;
         acceptedCount++;
-        visionVerdict = String.format("SNAP %.1f\" (%d tag%s)",
+        localizationVerdict = String.format("%s %.1f\" (%d tag%s)",
+                Tunables.VISION_CORRECTIONS_ENABLED ? "SNAP" : "would snap",
                 jump, tagCount, tagCount == 1 ? "" : "s");
     }
 
     private void rejectVision(String why) {
         rejectedCount++;
-        visionVerdict = "reject: " + why;
+        localizationVerdict = "reject: " + why;
     }
 
     private void reportVision() {
@@ -272,18 +405,23 @@ public class Sensors extends SubsystemBase {
             return;
         }
 
-        addTelemetry("Status", visionVerdict);
-        addTelemetry("Corrections", "%d taken / %d declined", acceptedCount, rejectedCount);
-        if (!Tunables.VISION_CORRECTIONS_ENABLED) {
-            addTelemetry("Vision mode", "WATCHING ONLY (not correcting)");
+        addTelemetry("Camera", visionVerdict);
+
+        // Nearest few targets: what an arm or a driver would care about.
+        List<TagSighting> targets = targets();
+        Collections.sort(targets, (a, b) -> Double.compare(a.range(), b.range()));
+        for (int i = 0; i < Math.min(3, targets.size()); i++) {
+            TagSighting t = targets.get(i);
+            addTelemetry(t.name, "%.0f\" at %+.0f° (%d tag%s, %.0fms old)",
+                    t.range(), Math.toDegrees(t.bearing()),
+                    t.tagCount, t.tagCount == 1 ? "" : "s", t.ageMs());
+            if (Tunables.SHOW_TAGS) robot.drive.drawTagSighting(t.fieldX, t.fieldY);
         }
 
-        // Draw the tags we know about, so a frame problem is visible rather
-        // than theoretical.
-        if (Tunables.SHOW_TAGS) {
-            for (FieldMap.Tag tag : FieldMap.localizationTags()) {
-                robot.drive.drawTagSighting(tag.x, tag.y);
-            }
+        if (localizationOn()) {
+            addTelemetry("Localization", localizationVerdict);
+            addTelemetry("Corrections", "%d %s / %d declined", acceptedCount,
+                    Tunables.VISION_CORRECTIONS_ENABLED ? "taken" : "watched", rejectedCount);
         }
     }
 }

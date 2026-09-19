@@ -44,10 +44,11 @@ DriveAbstract  (base: references, timeout, cleanup)
 ├── DriveToPose      go stand exactly there
 ├── DriveFwdByDist   go that way N inches
 ├── DriveTurnBy      rotate N degrees (relative)
-└── DriveTurnTo      face this heading (absolute)
+├── DriveTurnTo      face this heading (absolute)
+└── DriveFaceTarget  face the nearest thing the camera is tracking
 ```
 
-Adding a fifth is the normal way to extend this — copy whichever is closest.
+Adding another is the normal way to extend this — copy whichever is closest.
 
 **Every one takes a timeout, and that is not optional.** A command that never quite reaches its
 tolerance otherwise runs until the match ends, blocking everything queued behind it. The timer is
@@ -65,8 +66,9 @@ follower handles *how*.
 
 **All telemetry goes through `Sensors`.** Call `robot.sensors.addTelemetry(...)`. Never call
 `telemetry.update()` anywhere else — `Sensors.periodic()` is the only flush in the project, and a
-second one costs you half your data. `Sensors` also owns the Limelight and the AprilTag trust
-policy, because a camera is a sensor.
+second one costs you half your data. `Sensors` also owns the Limelight, because a camera is a
+sensor: it tracks every tag in view and answers "where is that?" with a `TagSighting`
+([vision.md](vision.md)).
 
 **`follower.update()` runs exactly once per loop**, in `PedroDrive.periodic()`. Zero times and the
 robot thinks it never moved; twice and it thinks it moved twice as far.
@@ -83,14 +85,16 @@ commands/DriveAbstract       base for all movement commands
 commands/DriveToPose         ├ go stand exactly there
 commands/DriveFwdByDist      ├ go that way N inches
 commands/DriveTurnBy         ├ rotate N degrees
-commands/DriveTurnTo         └ face this heading
+commands/DriveTurnTo         ├ face this heading
+commands/DriveFaceTarget     └ face the nearest tracked target
 
 subsystems/PedroDrive        mecanum + Pedro + all dashboard drawing
-subsystems/Sensors           shared sensors, the Limelight, the only telemetry flush
+subsystems/Sensors           shared sensors, Limelight tag tracking, the only telemetry flush
 
 utils/Constants              hardware names, directions, follower config (final)
 utils/Tunables               live-editable from the dashboard (not final)
-utils/FieldMap               tag positions + coordinate conversions
+utils/FieldMap               tag knowledge + every coordinate conversion
+utils/TagSighting            one tracked tag or target: where it is, how to aim at it
 utils/PersistentPoseManager  auto → teleop pose handoff
 utils/DriveyMcDriverson      teleop entry point
 utils/AutoMcAutty            autonomous entry point

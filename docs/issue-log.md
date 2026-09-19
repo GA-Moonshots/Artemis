@@ -20,6 +20,14 @@ symptom was tags drawn in the wrong place. Ported the Iapetus fix.
 to a Pedro major is the thing we'd rather avoid) and FTC Dashboard (never imported, and a second
 web server next to Panels).
 
+**A game can have no fixed tags at all.** Correcting the 09-16 entry: BIOBUZZ's tags don't ship
+with field positions. SDK 12.0 introduced *clusters* (several tags on one moving object, no field
+position), so `FieldMap.localizationTags()` came back empty and vision was quietly computing and
+drawing nothing useful. Vision now *tracks* tags, which works whether they move or not, and keeps
+localization behind a switch for games that have fixed tags: [vision.md](vision.md). The game's
+specifics live in its season repo. The Limelight's robot-space Y points **right** while ours
+points left; the flip lives in `FieldMap.limelightTargetToRobot()`.
+
 **GitHub fork re-parented.** `GA-Moonshots/Artemis` was a fork of the SolversLib Quickstart. It is
 now a fork of `FIRST-Tech-Challenge/FtcRobotController`, created fresh and fast-forwarded to our
 history. The old repo is `GA-Moonshots/Artemis-quickstart-archive`, archived. GitHub has no

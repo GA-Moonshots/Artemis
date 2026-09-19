@@ -63,23 +63,32 @@ public class Tunables {
     /** Trail of where we've been. Turn off if the canvas gets busy. */
     public static boolean SHOW_BREADCRUMBS = true;
 
-    /** Draw known AprilTag positions on the field. */
+    /** Draw the targets the camera is tracking, where it thinks they are. */
     public static boolean SHOW_TAGS = true;
 
     // ---- Vision ----
 
     /**
-     * Master switch for pose correction.
+     * How long a tag stays "known" after it leaves view, in ms. Longer rides
+     * out an arm briefly blocking the camera; shorter reacts faster to an
+     * object that's been moved. We store the field position, so driving
+     * doesn't make a remembered tag wrong. Someone moving the object does.
+     */
+    public static double TAG_MEMORY_MS = 500;
+
+    /**
+     * Work out where the ROBOT is from fixed tags, and report it without
+     * touching odometry. Only useful in a game with tags bolted to the field.
+     */
+    public static boolean TAG_LOCALIZATION = false;
+
+    /**
+     * ...and let that answer overwrite odometry. Implies TAG_LOCALIZATION.
      *
-     * OFF watches vision without letting it touch the robot: the dashboard
-     * still shows what it would have done, and nothing moves because of it.
-     *
-     * OFF BY DEFAULT FOR BIOBUZZ. FIRST's SDK 12.0 notes say this season's
-     * AprilTags move during the match, so they "are not suitable for absolute
-     * field localization." A tag that has moved still looks perfectly
-     * confident — it just drags odometry toward where the tag used to be,
-     * inside the jump limit, with no error anywhere. Turn this on only for a
-     * tag you've proven stays put (CameraCalibration, at a few spots).
+     * OFF until proven. A tag that moved still looks perfectly confident; it
+     * just drags odometry toward where the tag used to be, inside the jump
+     * limit, with no error anywhere. Turn this on only for tags you've shown
+     * stay put (CameraCalibration, at a few spots).
      */
     public static boolean VISION_CORRECTIONS_ENABLED = false;
 

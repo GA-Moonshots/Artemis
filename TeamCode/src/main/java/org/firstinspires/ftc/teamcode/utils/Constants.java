@@ -97,7 +97,7 @@ public class Constants {
     // ============================================================
     //                    FIELD GEOMETRY
     //  Field is 144" x 144", origin at bottom-left. 0 rad points RIGHT.
-    //  ⚙ BIOBUZZ: replace these with this year's actual scoring coordinates.
+    //  ⚙ EVERY SEASON: replace these with the game's scoring coordinates.
     // ============================================================
 
     public static final double BLUE_TARGET_X = 12;
@@ -226,19 +226,18 @@ public class Constants {
     /**
      * ⚙ TUNE — where the camera sits on the robot.
      *
-     * Measured from the robot's CENTRE at floor level:
-     *   +X = right, +Y = forward, +Z = up. Inches and degrees.
+     * Measured from the robot's CENTRE at floor level, named exactly like the
+     * fields on the Limelight's robot-space settings, so copying them across
+     * is one-to-one. The camera does the maths with ITS copy; this is our
+     * version-controlled record, because a reflashed Limelight forgets.
      *
-     * IMPORTANT: with a Limelight, the numbers that actually do the maths live
-     * ON THE CAMERA (its web UI, "robot space" settings). These are our
-     * version-controlled record of what should be entered there — a reflashed
-     * Limelight loses its config, and this is how you get it back. The
-     * CameraCalibration OpMode compares what the camera reports against a known
-     * pose and tells you what to change.
+     * Wrong here (or on the camera) = every tag distance is off by the same
+     * amount. CameraCalibration measures it. The Limelight's settings are in
+     * metres: divide by 39.37.
      */
-    public static final double CAMERA_X_INCHES = 0.0;    // right of centre
-    public static final double CAMERA_Y_INCHES = 6.0;    // forward of centre
-    public static final double CAMERA_Z_INCHES = 12.0;   // above the floor
+    public static final double CAMERA_FORWARD_INCHES = 6.0;
+    public static final double CAMERA_RIGHT_INCHES = 0.0;
+    public static final double CAMERA_UP_INCHES = 12.0;
     public static final double CAMERA_YAW_DEGREES = 0.0;    // 0 = facing forward
     public static final double CAMERA_PITCH_DEGREES = 0.0;  // + = tilted up
     public static final double CAMERA_ROLL_DEGREES = 0.0;

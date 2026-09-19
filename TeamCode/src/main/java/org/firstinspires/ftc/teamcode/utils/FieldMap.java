@@ -4,13 +4,17 @@ import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.limelightvision.LLFieldMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.vision.apriltag.AprilTagClusterMetadata;
 import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
 import org.firstinspires.ftc.vision.apriltag.AprilTagLibrary;
 import org.firstinspires.ftc.vision.apriltag.AprilTagMetadata;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -40,25 +44,28 @@ import java.util.List;
  *
  * The 2025-26 DECODE field, as a worked example: tags 20 and 24 were the goal
  * targets and carried positions; 21/22/23 were Obelisk motif tags and did not.
- * Expect entirely different ids, positions, sizes, and counts this season —
+ * Expect entirely different ids, positions, sizes, and counts every season —
  * nothing below assumes otherwise, and nothing below should be edited when the
  * game changes.
  *
- * ⚠ BIOBUZZ (2026-27) BREAKS THAT FILTER. Its tags ship WITH field positions
- * but move during the match, and some are grouped into "clusters" that the
- * SDK reports separately. FIRST's own note: not suitable for absolute field
- * localization. The positions below are where tags start, which is still
- * useful for drawing and for aiming — just not for snapping odometry. That's
- * why Tunables.VISION_CORRECTIONS_ENABLED defaults to false this season.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *  SOME TAGS ARE ON THINGS THAT MOVE
+ * ─────────────────────────────────────────────────────────────────────────────
+ * A game can put tags on game pieces or field elements that move during the
+ * match. Those are no use for "where am I?", but perfect for "where is that?"
+ * (see TagSighting). When several tags sit on one object, the SDK groups them
+ * into a "cluster", and targetName() is how a sighting learns which object
+ * it's on. A season with no fixed tags at all simply has an empty
+ * localizationTags(); nothing else changes.
  *
  * How many localization tags a field has matters for the trust policy: DECODE
  * had only two, at opposite ends, so "require several tags at once" would
  * essentially never fire. A field with tags on every wall could afford a
- * stricter rule. See Vision — the policy reads tag count as a signal rather
+ * stricter rule. Sensors' trust policy reads tag count as a signal rather
  * than assuming a number.
  *
- * See Vision for how a sighting becomes a pose correction, and
- * docs/coordinates.md for the frame rules.
+ * See docs/vision.md for tracking and aiming, and docs/coordinates.md for
+ * the frame rules.
  */
 public class FieldMap {
 
@@ -126,6 +133,45 @@ public class FieldMap {
     }
 
     /**
+     * A tag as the Limelight sees it in "robot space" → our robot frame.
+     * Returns {forward, left, up} in inches, or null if the camera sent no 3D
+     * pose for it.
+     *
+     * Limelight robot space: metres, +X forward, +Y to the robot's RIGHT, +Z
+     * up, origin at the robot's centre on the floor. Pedro turns positive
+     * toward the LEFT, so Y flips sign here, and nowhere else.
+     *
+     * Only as good as the camera's mount position in its web UI (see
+     * Constants.CAMERA_*). ⚠ VERIFY with CameraCalibration: hold a tag to the
+     * robot's left and "left" must come out positive.
+     */
+    public static double[] limelightTargetToRobot(Pose3D targetRobotSpace) {
+        if (targetRobotSpace == null) return null;
+        Position p = targetRobotSpace.getPosition();
+        // The SDK's placeholder when the camera sent nothing: exactly zero.
+        if (p.x == 0 && p.y == 0 && p.z == 0) return null;
+        return new double[] { p.unit.toInches(p.x), -p.unit.toInches(p.y), p.unit.toInches(p.z) };
+    }
+
+    /** A point relative to the robot → the field, given where the robot is. */
+    public static double[] robotToField(Pose robot, double forward, double left) {
+        double c = Math.cos(robot.heading());
+        double s = Math.sin(robot.heading());
+        return new double[] {
+                robot.x() + forward * c - left * s,
+                robot.y() + forward * s + left * c };
+    }
+
+    /** A field point → relative to the robot. Exactly undoes robotToField(). */
+    public static double[] fieldToRobot(Pose robot, double fieldX, double fieldY) {
+        double c = Math.cos(robot.heading());
+        double s = Math.sin(robot.heading());
+        double dx = fieldX - robot.x();
+        double dy = fieldY - robot.y();
+        return new double[] { dx * c + dy * s, -dx * s + dy * c };
+    }
+
+    /**
      * A Limelight botpose → a Pedro Pose.
      *
      * The Limelight reports metres, degrees, and (with the stock field map)
@@ -145,14 +191,14 @@ public class FieldMap {
     // ============================================================
 
     /**
-     * Every tag this season that we can actually localize from, in our frame.
-     * Tags without a field position (Obelisk motif tags) are filtered out.
+     * Every tag in the current game that we can localize from, in our frame.
+     * Tags without a field position (motif tags, tags on moving objects) are
+     * filtered out.
      */
     public static List<Tag> localizationTags() {
         List<Tag> tags = new ArrayList<>();
         try {
-            AprilTagLibrary library = AprilTagGameDatabase.getCurrentGameTagLibrary();
-            for (AprilTagMetadata meta : library.getAllTags()) {
+            for (AprilTagMetadata meta : gameLibrary().getAllTags()) {
                 if (meta.fieldPosition == null) continue;   // motif tag, not a landmark
 
                 // The library reports in its own DistanceUnit; normalise to inches.
@@ -176,6 +222,35 @@ public class FieldMap {
             if (t.id == id) return t;
         }
         return null;
+    }
+
+    private static AprilTagLibrary library;
+    private static final Map<Integer, String> targetNames = new HashMap<>();
+
+    /** Built once: the SDK makes a fresh copy on every call, and we ask every loop. */
+    private static AprilTagLibrary gameLibrary() {
+        if (library == null) library = AprilTagGameDatabase.getCurrentGameTagLibrary();
+        return library;
+    }
+
+    /**
+     * What a tag is stuck to: its SDK cluster's name, or "tag 31" if it's on
+     * its own. Sightings with the same name are the same object, which is how
+     * Sensors merges several tags into one target.
+     */
+    public static String targetName(int id) {
+        String name = targetNames.get(id);
+        if (name != null) return name;
+
+        name = "tag " + id;
+        try {
+            AprilTagClusterMetadata cluster = gameLibrary().lookupCluster(id);
+            if (cluster != null) name = cluster.name;
+        } catch (Exception ignored) {
+            // No library, or a game without clusters. A loner is a fine answer.
+        }
+        targetNames.put(id, name);
+        return name;
     }
 
     // ============================================================

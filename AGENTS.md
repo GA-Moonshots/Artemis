@@ -54,14 +54,16 @@ commands/Drive               default teleop drive
 commands/DriveToPose         ├ go stand exactly there
 commands/DriveFwdByDist      ├ go that way N inches
 commands/DriveTurnBy         ├ rotate N degrees
-commands/DriveTurnTo         └ face this heading
+commands/DriveTurnTo         ├ face this heading
+commands/DriveFaceTarget     └ face the nearest tracked target (the TagSighting example)
 
 subsystems/PedroDrive        mecanum + Pedro + dashboard drawing — tune it, don't rewrite it
-subsystems/Sensors           every shared sensor, the Limelight, AND the only telemetry flush
+subsystems/Sensors           every shared sensor, Limelight tag tracking, AND the only telemetry flush
 
 utils/Constants              hardware names, motor directions, follower config (final)
 utils/Tunables               values you edit live from the dashboard (not final)
-utils/FieldMap               tag positions + every coordinate conversion
+utils/FieldMap               tag knowledge + every coordinate conversion
+utils/TagSighting            a tracked tag/target: field position, range, bearing, aim-from-pivot
 utils/PersistentPoseManager  auto → teleop pose handoff
 utils/DriveyMcDriverson      teleop entry point
 utils/AutoMcAutty            autonomous entry point

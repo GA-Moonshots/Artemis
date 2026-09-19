@@ -77,6 +77,8 @@ If it drives somewhere else, the mismatch is between Pedro and Panels — not yo
 |---|---|---|
 | Panels canvas | centre origin, rotated, Y-flipped | `PedroDrive` (preset, pinned in code) |
 | Limelight botpose | metres, FTC field frame | `FieldMap.limelightToPedro()` |
+| Limelight tag, robot space | metres, +X forward, +Y **right** | `FieldMap.limelightTargetToRobot()` |
+| A tracked tag ↔ the field | inches, robot frame (+Y left) | `FieldMap.robotToField()` / `fieldToRobot()` |
 | FTC SDK AprilTag | inches, FTC field frame | `FieldMap.ftcToPedro()` |
 
 **FTC's field frame isn't just Pedro's with the origin moved.** Besides the centre-vs-corner origin, Pedro

@@ -13,6 +13,7 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.commands.Drive;
+import org.firstinspires.ftc.teamcode.commands.DriveFaceTarget;
 import org.firstinspires.ftc.teamcode.commands.DriveFwdByDist;
 import org.firstinspires.ftc.teamcode.commands.DriveTurnBy;
 import org.firstinspires.ftc.teamcode.commands.DriveTurnTo;
@@ -151,6 +152,10 @@ public class MyRobot extends Robot {
         // the wheels, and the Drive default command picks them straight back up.
         new GamepadButton(player1, GamepadKeys.Button.DPAD_UP)
                 .whenPressed(new InstantCommand(() -> drive.stop(), drive));
+
+        // LEFT BUMPER — face the nearest thing the camera is tracking.
+        new GamepadButton(player1, GamepadKeys.Button.LEFT_BUMPER)
+                .whenPressed(new DriveFaceTarget(this, 2));
 
         // Right bumper is slow mode — read directly in Drive.execute(), not bound here.
 
