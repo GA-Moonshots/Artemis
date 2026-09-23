@@ -6,6 +6,36 @@ Format: `## YYYY-MM-DD — title`, then what broke, why, and the fix.
 
 ---
 
+## 2026-09-22 — Android Studio's Gradle upgrade broke every laptop at once
+
+**`Failed to apply plugin 'com.android.internal.library'`, on sync and on build.** Happened in
+Iapetus. At the bottom of the stack trace is the only sentence that matters: *"Plugin
+'com.android.internal.library' relies on 'org.gradle.api.problems.internal.InternalProblems', a
+Gradle internal API that was removed in Gradle 9.6.0."*
+
+Android Studio offered a Gradle upgrade, someone accepted it, and a commit called "update gradle"
+pushed the wrapper from 9.1.0 to **9.7.1**. The SDK pins AGP **8.13.2** in `build.gradle`, and
+every AGP 8.x breaks on Gradle ≥ 9.6. The code was fine. The build tools no longer matched.
+
+**Why "pull the latest" didn't help:** the latest commit was the one that broke it. Every pull
+spread it to another laptop.
+
+**Fix:** `gradle/wrapper/gradle-wrapper.properties` restored byte-for-byte to what the SDK ships.
+The upgrade had also quietly dropped `networkTimeout` and `validateDistributionUrl`.
+
+**What changed in Artemis because of it.** The docs already said "decline", and
+`check-structure.sh` would have caught it, but only if someone had run it. Now:
+
+- `scripts/hooks/pre-commit` refuses a commit that edits upstream's files. It lets merges through,
+  and lets a file through that's been put back exactly as upstream ships it. Android Studio's first
+  sync turns it on (`TeamCode/build.gradle`), and `doctor.sh` says if it's off.
+- `check-structure.sh` prints the exact `git checkout` that puts each file back, and names the
+  upgrade prompt when the drift is in Gradle's files.
+- `build.sh` recognises a Gradle/AGP mismatch and says so, instead of 300 lines of stack trace.
+
+The habit worth keeping: when the build breaks right after a pull, look at what the pull changed
+before you look at your own code — `git log --oneline -5 -- gradle build.gradle`.
+
 ## 2026-09-20 — `reset()` doesn't cancel anything, and `cancel()`'s docs name a method that isn't there
 
 **`reset()` is documented "Cancels all previous commands". It cancels nothing.**

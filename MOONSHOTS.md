@@ -19,7 +19,8 @@ Artemis, goddess of the moon, patron of a Moonshots codebase. She also doesn't m
 - **One coordinate frame**, converted once, at the edge, with on-screen markers that show in two
   seconds whether the dashboard agrees
 - **Every tunable number in one place**, with the tuning sequence written next to it
-- **Scripts that check, never change**: `doctor.sh`, `build.sh`, `check-structure.sh`
+- **Scripts that check, never change**: `doctor.sh`, `build.sh`, `check-structure.sh`. Plus a
+  commit guard that stops an accepted "upgrade Gradle?" prompt reaching the whole team.
 
 It survives dependency churn by design: SolversLib supplies only the scheduler, Pedro's follower is
 reached through three files (`PedroDrive`, `DriveAbstract`, `Constants`), and the SDK arrives by a
