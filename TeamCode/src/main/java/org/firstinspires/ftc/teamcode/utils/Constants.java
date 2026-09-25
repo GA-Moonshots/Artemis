@@ -131,6 +131,19 @@ public class Constants {
     // ============================================================
 
     public static MecanumConfig drivetrainConfig = new MecanumConfig(c -> {
+        c.frontLeftName.set("leftFront");
+        c.frontRightName.set("rightFront");
+        c.backLeftName.set("leftBack");
+        c.backRightName.set("rightBack");
+        c.frontLeftDirection.set(DcMotorSimple.Direction.REVERSE);
+        c.frontRightDirection.set(DcMotorSimple.Direction.REVERSE);
+        c.backLeftDirection.set(DcMotorSimple.Direction.FORWARD);
+        c.backRightDirection.set(DcMotorSimple.Direction.REVERSE);
+        c.manualBrakeMode.set(true);
+        c.powerThreshold.set(0.01);
+    });
+    /*
+    public static MecanumConfig drivetrainConfig = new MecanumConfig(c -> {
         c.frontLeftName.set(LEFT_FRONT_NAME);
         c.backLeftName.set(LEFT_BACK_NAME);
         c.frontRightName.set(RIGHT_FRONT_NAME);
@@ -143,8 +156,8 @@ public class Constants {
 
         c.manualBrakeMode.set(BRAKE_WHEN_DRIVER_LETS_GO);
         /** Skip motor writes smaller than this. Saves loop time; 0.01 is fine. */
-        c.powerThreshold.set(0.01);
-    });
+        /*c.powerThreshold.set(0.01);
+    });*/
 
     // ============================================================
     //                    PINPOINT LOCALIZATION
