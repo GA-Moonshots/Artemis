@@ -390,7 +390,7 @@ public class PedroDrive extends SubsystemBase {
         panels.line(pose.x() + noseX, pose.y() + noseY);
     }
 
-    /** Remember where we are, if we've moved far enough to be worth remembering. */
+    /** Remember where we are and when, every loop. Anything older than POSE_HISTORY_NANOS goes. */
     private void rememberPose() {
         long now = System.nanoTime();
         poseHistory.addLast(new Stamped(now, getPose()));

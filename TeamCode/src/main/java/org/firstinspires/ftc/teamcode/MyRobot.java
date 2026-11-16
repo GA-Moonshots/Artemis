@@ -105,7 +105,10 @@ public class MyRobot extends Robot {
         sensors = new Sensors(this);
         drive = new PedroDrive(this, startPose);
 
-        register(drive, sensors);
+        // Built first, registered LAST. The scheduler runs periodic() in this
+        // order, and Sensors' periodic() is the telemetry flush: a mechanism
+        // registered after it prints a loop late, under the wrong heading.
+        register(drive, sensors);   // this season's mechanisms go before sensors
     }
 
     // ============================================================

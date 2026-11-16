@@ -6,6 +6,26 @@ Format: `## YYYY-MM-DD — title`, then what broke, why, and the fix.
 
 ---
 
+## 2026-11-16 — The SDK's sample tags passed as fixed field tags
+
+**Camera Calibration turned on `TAG_LOCALIZATION` in a season with no fixed tags, and left it on.**
+Found in Iapetus (BIOBUZZ, where every tag rides on a movable Hive). `FieldMap.localizationTags()`
+skipped tags whose `fieldPosition` was `null`. SDK 12.0 never uses `null`: its short `addTag()`
+stores `(0,0,0)`. So the four sample tags (583–586, always in `getCurrentGameTagLibrary()`)
+counted as landmarks at dead centre, and so would any motif tag added the same way. Calibration
+saw a non-empty list, switched localization on, and pushed a bogus field map to the Limelight.
+`Tunables` are static, so the switch stayed on in every OpMode until the app restarted. No pose
+was ever changed (`VISION_CORRECTIONS_ENABLED` stayed off). The cost was wasted work and confusing
+telemetry.
+
+**Fix:** `FieldMap.hasFieldPosition()` treats `(0,0,0)` as no position. `Sensors` ignores both
+switches when the SDK lists no fixed tags, and says so on telemetry. Calibration restores both
+switches in `end()`, is `@Configurable` (its "edit live on Panels" settings weren't, because Panels
+only lists annotated classes), and gained `TAG_ID`, `WHOLE_TARGET`, `TAG_UP`, and `FIELD_CHECK`.
+
+**The habit:** an OpMode that changes a `Tunables` value is changing it for every OpMode after it.
+Put it back in `end()`.
+
 ## 2026-09-22 — Android Studio's Gradle upgrade broke every laptop at once
 
 **`Failed to apply plugin 'com.android.internal.library'`, on sync and on build.** Happened in

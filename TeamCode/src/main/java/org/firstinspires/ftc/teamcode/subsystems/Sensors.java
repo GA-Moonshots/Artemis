@@ -75,6 +75,10 @@ public class Sensors extends SubsystemBase {
     private final Map<Integer, TagSighting> latestById = new LinkedHashMap<>();
 
     // Fixed-tag localization: off unless a season has tags that stay put.
+    // No fixed tags in the SDK (every tag rides on something that moves) and
+    // both Tunables switches do nothing, on purpose: a tag on a moving object
+    // can say where IT is, never where WE are.
+    private final boolean fieldHasFixedTags;
     private String localizationVerdict = "off";
     private Pose lastAcceptedPose = null;
     private int acceptedCount = 0;
@@ -84,6 +88,7 @@ public class Sensors extends SubsystemBase {
         this.robot = robot;
         this.telemetry = robot.telemetry;
         this.megaphone = PanelsTelemetry.INSTANCE.getTelemetry();
+        this.fieldHasFixedTags = !FieldMap.localizationTags().isEmpty();
 
         initLimelight();
 
@@ -238,9 +243,15 @@ public class Sensors extends SubsystemBase {
         }
     }
 
-    /** Localization needs fixed tags. Seasons without them leave both switches off. */
-    private static boolean localizationOn() {
-        return Tunables.TAG_LOCALIZATION || Tunables.VISION_CORRECTIONS_ENABLED;
+    /** Does the SDK list any tags bolted to the field this season? */
+    public boolean fieldHasFixedTags() {
+        return fieldHasFixedTags;
+    }
+
+    /** Either Tunables switch turns localization on, but only if there are fixed tags to localize from. */
+    private boolean localizationOn() {
+        return fieldHasFixedTags
+                && (Tunables.TAG_LOCALIZATION || Tunables.VISION_CORRECTIONS_ENABLED);
     }
 
     private void initLimelight() {
@@ -254,9 +265,9 @@ public class Sensors extends SubsystemBase {
             // only on the camera. Best effort — a camera with a good built-in
             // map still works, so we don't fail the robot over this.
             //
-            // Only when we'll localize off it, and only if there's something
+            // Only when we'll localize off it, which also means there's something
             // to send: an empty map would wipe whatever the camera already has.
-            if (localizationOn() && !FieldMap.localizationTags().isEmpty()) {
+            if (localizationOn()) {
                 try {
                     limelight.uploadFieldmap(FieldMap.buildLimelightFieldMap(), null);
                 } catch (Exception ignored) {
@@ -429,6 +440,9 @@ public class Sensors extends SubsystemBase {
             addTelemetry("Localization", localizationVerdict);
             addTelemetry("Corrections", "%d %s / %d declined", acceptedCount,
                     Tunables.VISION_CORRECTIONS_ENABLED ? "taken" : "watched", rejectedCount);
+        } else if (Tunables.TAG_LOCALIZATION || Tunables.VISION_CORRECTIONS_ENABLED) {
+            // Someone flipped a switch and nothing is happening. Say why.
+            addTelemetry("Localization", "off — no fixed tags this season");
         }
     }
 }

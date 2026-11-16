@@ -71,7 +71,7 @@ utils/TagSighting            a tracked tag/target: field position, range, bearin
 utils/PersistentPoseManager  auto → teleop pose handoff
 utils/DriveyMcDriverson      teleop entry point
 utils/AutoMcAutty            autonomous entry point
-utils/CameraCalibration      is the camera telling the truth?
+utils/CameraCalibration      is the camera telling the truth? (all settings live on Panels)
 utils/Tuning                 Pedro AutoTune — tune from a browser, see docs/tuning.md
 utils/*Tuner, utils/Tests     the tuners it runs (copied from Pedro — don't edit)
 ```
@@ -81,6 +81,13 @@ https://github.com/GA-Moonshots/Ganymede/tree/master/TeamCode/src/main/java/org/
 Hardware lookups in the constructor, hardware names from `Constants`, small methods that each do
 one thing. Not `PedroDrive`: it wraps Pedro and is no model for a mechanism. Adding a movement? Extend
 `DriveAbstract`, and give it a real timeout.
+
+Subsystems never read a gamepad. The operator's controls go in the mechanism's default command,
+dead zone included. A pre-programmed action is its own command that requires the subsystem:
+scheduling it interrupts the default command, and the default takes over again when it ends. That
+way one command serves both an autonomous routine and a teleop button. In `MyRobot`, `register()`
+`Sensors` last: its `periodic()` is the telemetry flush. (Iapetus's `IntakeManual` /
+`LaunchManual` / `LaunchDynamic` are the worked example.)
 
 ## Rule 4: numbers have exactly one home
 
