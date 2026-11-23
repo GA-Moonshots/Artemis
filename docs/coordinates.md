@@ -77,7 +77,7 @@ If it drives somewhere else, the mismatch is between Pedro and Panels — not yo
 |---|---|---|
 | Panels canvas | centre origin, rotated, Y-flipped | `PedroDrive` (preset, pinned in code) |
 | Limelight botpose | metres, FTC field frame | `FieldMap.limelightToPedro()` |
-| Limelight tag, robot space | metres, +X forward, +Y **right** | `FieldMap.limelightTargetToRobot()` |
+| Limelight tag, robot space | metres, camera axes: +X **right**, +Y **down**, +Z forward | `FieldMap.limelightTargetToRobot()` |
 | A tracked tag ↔ the field | inches, robot frame (+Y left) | `FieldMap.robotToField()` / `fieldToRobot()` |
 | FTC SDK AprilTag | inches, FTC field frame | `FieldMap.ftcToPedro()` |
 

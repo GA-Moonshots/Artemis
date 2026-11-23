@@ -145,9 +145,10 @@ public class FieldMap {
      * Returns {forward, left, up} in inches, or null if the camera sent no 3D
      * pose for it.
      *
-     * Limelight robot space: metres, +X forward, +Y to the robot's RIGHT, +Z
-     * up, origin at the robot's centre on the floor. Pedro turns positive
-     * toward the LEFT, so Y flips sign here, and nowhere else.
+     * Limelight "robot space" keeps the CAMERA's axes, just moved to the
+     * robot's centre: metres, +X to the robot's RIGHT, +Y DOWN, +Z FORWARD.
+     * So forward = z, left = -x, up = -y. Read x as forward (as this once did)
+     * and a tag dead ahead comes out "beside us": a 90° wrong turn.
      *
      * Only as good as the camera's mount position in its web UI (see
      * Constants.CAMERA_*). ⚠ VERIFY with CameraCalibration: hold a tag to the
@@ -158,7 +159,7 @@ public class FieldMap {
         Position p = targetRobotSpace.getPosition();
         // The SDK's placeholder when the camera sent nothing: exactly zero.
         if (p.x == 0 && p.y == 0 && p.z == 0) return null;
-        return new double[] { p.unit.toInches(p.x), -p.unit.toInches(p.y), p.unit.toInches(p.z) };
+        return new double[] { p.unit.toInches(p.z), -p.unit.toInches(p.x), -p.unit.toInches(p.y) };
     }
 
     /** A point relative to the robot → the field, given where the robot is. */

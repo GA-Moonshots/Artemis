@@ -6,6 +6,20 @@ Format: `## YYYY-MM-DD — title`, then what broke, why, and the fix.
 
 ---
 
+## 2026-11-23 — Face Target turned 90° the wrong way
+
+**`DriveFaceTarget` swung about 90° away from a tag straight in front of it.** Found in Iapetus (the
+Player 1 X button, aiming at a Hive). The Limelight's tag-in-robot-space pose keeps the camera's
+axes: +X right, +Y down, +Z forward. `FieldMap.limelightTargetToRobot()` read them as +X forward,
++Y right, +Z up. A tag dead ahead came out as "0\" forward, a few inches left", so the robot turned
+to face its side. Range was wrong too, so `nearestTarget()` could pick the wrong target and
+camera-aimed launches used the wrong distance. Localization was unaffected: botpose doesn't go
+through this method.
+
+**Fix:** forward = z, left = −x, up = −y, in `limelightTargetToRobot()` and nowhere else.
+
+**How to spot it:** in Camera Calibration, a tag 48" straight ahead reads `fwd ≈ 0`, `up ≈ 48`.
+
 ## 2026-11-16 — The SDK's sample tags passed as fixed field tags
 
 **Camera Calibration turned on `TAG_LOCALIZATION` in a season with no fixed tags, and left it on.**
